@@ -54,6 +54,7 @@ def get_content(content_id):
             cursor.execute("""
                 SELECT c.id, c.title, c.body, c.images,
                        c.created_at as created_at,
+                       c.author_id as author_id,
                        u.username as author_name
                 FROM contents c
                 JOIN users u ON c.author_id = u.id
