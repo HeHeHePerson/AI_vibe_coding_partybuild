@@ -321,7 +321,7 @@ const contents = {
                         <div class="comment-body">${utils.escapeHtml(comment.body).replace(/\n/g, '<br>')}</div>
                         <div class="comment-actions">
                             ${likeBtnHtml}
-                            ${canDelete ? `<button onclick="contents.deleteComment(${comment.id})">删除</button>` : ''}
+                            ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="contents.deleteComment(${comment.id})">删除</button>` : ''}
                         </div>
                     </div>
                 `;
