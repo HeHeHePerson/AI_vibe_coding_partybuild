@@ -24,7 +24,7 @@ def get_contents():
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT c.id, c.title, c.images,
-                       DATE_FORMAT(c.created_at, '%%Y-%%m-%%d %%H:%%i:%%s') as created_at,
+                       DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
                        u.username as author_name
                 FROM contents c
                 JOIN users u ON c.author_id = u.id
@@ -53,7 +53,7 @@ def get_content(content_id):
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT c.id, c.title, c.body, c.images,
-                       DATE_FORMAT(c.created_at, '%%Y-%%m-%%d %%H:%%i:%%s') as created_at,
+                       DATE_FORMAT(c.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
                        u.username as author_name
                 FROM contents c
                 JOIN users u ON c.author_id = u.id
@@ -74,7 +74,7 @@ def get_content(content_id):
             # 获取评论
             cursor.execute("""
                 SELECT cm.id, cm.content_id, cm.user_id, cm.body,
-                       DATE_FORMAT(cm.created_at, '%%Y-%%m-%%d %%H:%%i:%%s') as created_at,
+                       DATE_FORMAT(cm.created_at, '%Y-%m-%d %H:%i:%s') as created_at,
                        u.username as user_name
                 FROM comments cm
                 JOIN users u ON cm.user_id = u.id
