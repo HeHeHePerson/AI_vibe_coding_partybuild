@@ -40,7 +40,7 @@ def get_user_by_id(user_id):
     """根据用户ID获取用户"""
     with get_db() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id, username, role, created_at FROM users WHERE id = %s", (user_id,))
+            cursor.execute("SELECT id, username, role, DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i:%%s') as created_at FROM users WHERE id = %s", (user_id,))
             return cursor.fetchone()
 
 
@@ -48,7 +48,7 @@ def get_all_users():
     """获取所有用户列表"""
     with get_db() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC")
+            cursor.execute("SELECT id, username, role, DATE_FORMAT(created_at, '%%Y-%%m-%%d %%H:%%i:%%s') as created_at FROM users ORDER BY created_at DESC")
             return cursor.fetchall()
 
 
