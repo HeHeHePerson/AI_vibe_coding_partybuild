@@ -14,7 +14,8 @@ DB_PASSWORD = os.environ.get('DB_PASSWORD', 'root')
 DB_NAME = os.environ.get('DB_NAME', 'party_building')
 
 # 文件上传配置
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'webapp', 'uploads')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 

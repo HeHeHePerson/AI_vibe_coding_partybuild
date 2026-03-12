@@ -11,7 +11,11 @@ from database import init_db
 from webapp.utils.stats import record_visit
 
 # 创建Flask应用
-application = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+application = Flask(__name__,
+    template_folder=os.path.join(BASE_DIR, 'webapp', 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'webapp', 'static')
+)
 app = application
 app.secret_key = SECRET_KEY
 
