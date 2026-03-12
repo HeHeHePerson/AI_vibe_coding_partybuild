@@ -2,7 +2,9 @@
 智慧党建系统 - Flask应用主入口
 """
 import os
-from flask import Flask, render_template, session, redirect, url_for
+import logging
+from datetime import datetime
+from flask import Flask, render_template, session, redirect, url_for, request, g
 from config import (
     SECRET_KEY, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME,
     UPLOAD_FOLDER, ALLOWED_EXTENSIONS, MAX_CONTENT_LENGTH
@@ -18,6 +20,22 @@ application = Flask(__name__,
 )
 app = application
 app.secret_key = SECRET_KEY
+
+# 配置日志
+LOG_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, 'access.log')
+
+# 配置日志记录器
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # 配置
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -37,6 +55,69 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(contents_bp)
 app.register_blueprint(stats_bp)
+
+
+# 请求日志记录中间件
+@app.before_request
+def log_request_info():
+    """记录请求开始时间"""
+    g.request_start_time = datetime.now()
+
+
+@app.after_request
+def log_response_info(response):
+    """记录请求日志"""
+    # 排除静态文件请求
+    if request.path.startswith('/static'):
+        return response
+
+    # 获取请求信息
+    method = request.method
+    path = request.path
+    remote_addr = request.remote_addr
+    user_agent = request.headers.get('User-Agent', '')
+
+    # 获取请求体（仅记录非敏感信息）
+    request_data = ""
+    if method in ['POST', 'PUT', 'DELETE']:
+        # 记录请求参数，但隐藏敏感字段
+        form = request.form.to_dict()
+        json_data = request.get_json(silent=True)
+        if json_data:
+            # 隐藏密码等敏感信息
+            sanitized = {}
+            for k, v in json_data.items():
+                if k.lower() in ['password', 'token', 'secret', 'key']:
+                    sanitized[k] = '***'
+                else:
+                    sanitized[k] = str(v)[:200]  # 限制长度
+            request_data = f" | Body: {sanitized}"
+        elif form:
+            sanitized = {}
+            for k, v in form.items():
+                if k.lower() in ['password', 'token', 'secret', 'key']:
+                    sanitized[k] = '***'
+                else:
+                    sanitized[k] = str(v)[:200]
+            request_data = f" | Form: {sanitized}"
+
+    # 获取用户信息
+    user_id = session.get('user_id')
+    username = session.get('user', {}).get('username', 'Anonymous')
+    user_info = f" | User: {username}(ID:{user_id})" if user_id else ""
+
+    # 计算请求处理时间
+    if hasattr(g, 'request_start_time'):
+        duration = (datetime.now() - g.request_start_time).total_seconds()
+        duration_info = f" | Duration: {duration:.3f}s"
+    else:
+        duration_info = ""
+
+    # 记录日志
+    log_message = f"{remote_addr} - {method} {path}{user_info}{request_data} | Status: {response.status_code}{duration_info}"
+    logger.info(log_message)
+
+    return response
 
 
 # 路由：首页（党建之声）
