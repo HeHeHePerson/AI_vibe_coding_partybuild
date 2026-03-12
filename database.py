@@ -10,14 +10,15 @@ from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 
 def get_connection():
     """获取数据库连接"""
-    return pymysql.connect(
+    conn = pymysql.connect(
         host=DB_HOST,
         port=DB_PORT,
         user=DB_USER,
         password=DB_PASSWORD,
         database=DB_NAME,
         charset='utf8mb4',
-        cursorclass=DictCursor
+        cursorclass=DictCursor,
+        init_command="SET time_zone = '+8:00'"  # 设置时区为东八区
     )
 
 
