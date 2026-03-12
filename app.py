@@ -50,11 +50,13 @@ from webapp.routes.auth import auth_bp
 from webapp.routes.users import users_bp
 from webapp.routes.contents import contents_bp
 from webapp.routes.stats import stats_bp
+from webapp.routes.notices import notices_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(contents_bp)
 app.register_blueprint(stats_bp)
+app.register_blueprint(notices_bp)
 
 
 # 请求日志记录中间件
@@ -177,6 +179,18 @@ def manage_page():
     if user.get('role') != 'admin':
         return redirect(url_for('index'))
     return render_template('manage.html')
+
+
+# 路由：公告管理页面（管理员）
+@app.route('/notices')
+def notices_page():
+    """公告管理页面"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login_page'))
+    if user.get('role') != 'admin':
+        return redirect(url_for('index'))
+    return render_template('notices.html')
 
 
 # 错误处理

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}公告管理 - 智慧党建系统{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>公告管理</h1>
+
+    <!-- 发布公告表单 -->
+    <div class="form-container" style="max-width:800px;margin-bottom:30px;">
+        <h3>发布新公告</h3>
+        <form id="noticeForm">
+            <div class="form-group">
+                <label for="title">公告标题</label>
+                <input type="text" id="title" name="title" required placeholder="请输入公告标题" style="font-size:16px;">
+            </div>
+            <div class="form-group">
+                <label for="content">公告内容</label>
+                <textarea id="content" name="content" required placeholder="请输入公告内容" style="min-height:150px;line-height:1.8;"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">发布公告</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 公告列表 -->
+    <div class="notices-list">
+        <h3>公告列表</h3>
+        <div id="noticesContainer">
+            <p style="text-align:center;color:#999;">加载中...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 公告管理
+const notices = {
+    // 获取公告列表
+    getNotices: async function() {
+        const result = await utils.api('/api/notices');
+        if (result.code === 200) {
+            this.renderNotices(result.data);
+        } else {
+            utils.showToast(result.message || '获取公告列表失败', 'error');
+        }
+    },
+
+    // 渲染公告列表
+    renderNotices: function(notices) {
+        const container = document.getElementById('noticesContainer');
+        if (!container) return;
+
+        if (!notices || notices.length === 0) {
+            container.innerHTML = '<p style="text-align:center;color:#999;">暂无公告</p>';
+            return;
+        }
+
+        container.innerHTML = notices.map(notice => `
+            <div class="notice-item" data-id="${notice.id}">
+                <div class="notice-header">
+                    <h4>${utils.escapeHtml(notice.title)}</h4>
+                    <button class="btn btn-danger btn-sm" onclick="notices.deleteNotice(${notice.id})">删除</button>
+                </div>
+                <div class="notice-meta">
+                    <span>发布者: ${utils.escapeHtml(notice.author_name)}</span>
+                    <span>发布时间: ${utils.formatDate(notice.created_at)}</span>
+                </div>
+                <div class="notice-content">${utils.escapeHtml(notice.content).replace(/\n/g, '<br>')}</div>
+            </div>
+        `).join('');
+    },
+
+    // 创建公告
+    create: async function(title, content) {
+        const result = await utils.api('/api/notices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content })
+        });
+
+        if (result.code === 200) {
+            utils.showToast('公告发布成功', 'success');
+            document.getElementById('noticeForm').reset();
+            this.getNotices();
+        } else {
+            utils.showToast(result.message || '发布失败', 'error');
+        }
+    },
+
+    // 删除公告
+    deleteNotice: async function(noticeId) {
+        if (!confirm('确定要删除这条公告吗？')) return;
+
+        const result = await utils.api(`/api/notices/${noticeId}`, {
+            method: 'DELETE'
+        });
+
+        if (result.code === 200) {
+            utils.showToast('删除成功', 'success');
+            this.getNotices();
+        } else {
+            utils.showToast(result.message || '删除失败', 'error');
+        }
+    }
+};
+
+// 表单提交
+document.getElementById('noticeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const title = document.getElementById('title').value.trim();
+    const content = document.getElementById('content').value.trim();
+
+    if (!title) {
+        utils.showToast('标题不能为空', 'error');
+        return;
+    }
+
+    if (!content) {
+        utils.showToast('内容不能为空', 'error');
+        return;
+    }
+
+    notices.create(title, content);
+});
+
+// 页面加载
+document.addEventListener('DOMContentLoaded', function() {
+    notices.getNotices();
+});
+</script>
+<style>
+.notice-item {
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.notice-item .notice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+.notice-item .notice-header h4 {
+    margin: 0;
+    color: var(--primary-red);
+}
+.notice-item .notice-meta {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+.notice-item .notice-meta span {
+    margin-right: 20px;
+}
+.notice-item .notice-content {
+    line-height: 1.8;
+    color: #333;
+}
+</style>
+{% endblock %}

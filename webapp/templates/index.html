@@ -3,6 +3,14 @@
 {% block title %}党建之声 - 智慧党建系统{% endblock %}
 
 {% block content %}
+<!-- 公告区域 -->
+<div class="notices-section" id="noticesSection" style="display:none;">
+    <h3>公告</h3>
+    <div class="notices-bar" id="noticesBar">
+        <!-- 公告内容将通过JS动态插入 -->
+    </div>
+</div>
+
 <!-- 统计区域 -->
 <div class="stats-bar">
     <div class="stat-card">
@@ -32,6 +40,9 @@
 document.addEventListener('DOMContentLoaded', function() {
     // 初始化用户登录状态
     auth.checkAuth().then(function() {
+        // 加载公告
+        notices.getNotices();
+
         // 加载统计数据
         stats.getStats();
 
@@ -39,5 +50,73 @@ document.addEventListener('DOMContentLoaded', function() {
         contents.getList();
     });
 });
+
+// 公告相关
+const notices = {
+    // 获取公告列表
+    getNotices: async function() {
+        const result = await utils.api('/api/notices');
+        if (result.code === 200) {
+            this.renderNotices(result.data);
+        }
+    },
+
+    // 渲染公告（首页展示最新一条）
+    renderNotices: function(notices) {
+        const section = document.getElementById('noticesSection');
+        const bar = document.getElementById('noticesBar');
+        if (!section || !bar) return;
+
+        if (!notices || notices.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+        // 只显示最新一条公告
+        const notice = notices[0];
+        bar.innerHTML = `
+            <div class="notice-item">
+                <div class="notice-title">${utils.escapeHtml(notice.title)}</div>
+                <div class="notice-content">${utils.escapeHtml(notice.content).replace(/\n/g, '<br>')}</div>
+                <div class="notice-meta">
+                    <span>${utils.formatDate(notice.created_at)}</span>
+                </div>
+            </div>
+        `;
+    }
+};
 </script>
+<style>
+.notices-section {
+    background: var(--white);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--primary-red);
+}
+.notices-section h3 {
+    color: var(--primary-red);
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+.notice-item {
+    padding: 10px 0;
+}
+.notice-item .notice-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary-red);
+    margin-bottom: 10px;
+}
+.notice-item .notice-content {
+    line-height: 1.8;
+    color: #333;
+    margin-bottom: 10px;
+}
+.notice-item .notice-meta {
+    font-size: 12px;
+    color: #999;
+}
+</style>
 {% endblock %}
