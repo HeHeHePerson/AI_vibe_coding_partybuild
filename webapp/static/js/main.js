@@ -90,26 +90,71 @@ const security = {
 
     /**
      * 检测开发者工具是否被打开
-     * 通过定时检查console和元素尺寸变化来检测
+     * 通过多种方法检测：尺寸变化、console输出、debugger等
      */
     disableDevTools: function() {
         const self = this;
         let devToolsOpen = false;
+        const threshold = 160; // 开发者工具打开时的宽度阈值
 
-        // 方法1: 检测console输出
-        const checkConsole = function() {
+        // 方法1: 检测window尺寸变化（最有效）
+        // 当开发者工具在侧面打开时，window宽度会变小
+        setInterval(function() {
             if (!devToolsOpen) {
-                console.log('%c智慧党建系统', 'font-size: 20px; color: #c23531;');
+                // 检测window宽度是否异常变小
+                if (window.outerWidth - window.innerWidth > threshold ||
+                    window.outerHeight - window.innerHeight > threshold) {
+                    devToolsOpen = true;
+                    self.showWarning();
+                }
             }
-            setTimeout(checkConsole, 1000);
-        };
-        checkConsole();
+        }, 500);
 
-        // 方法2: 检测开发者工具打开
-        document.addEventListener('devtoolsopening', function() {
-            devToolsOpen = true;
-            alert('请勿使用开发者工具');
-        });
+        // 方法2: 重写console.log来检测（但有经验的黑客可以绕过）
+        const originalLog = console.log;
+        console.log = function() {
+            // 检测调用栈是否有调试相关
+            const stack = new Error().stack;
+            if (stack && stack.includes('debugger')) {
+                devToolsOpen = true;
+                self.showWarning();
+            }
+            originalLog.apply(console, arguments);
+        };
+
+        // 方法3: 定时执行debugger（干扰调试）
+        // 注意：正常用户不会受影响，但会干扰调试
+        setInterval(function() {
+            if (!devToolsOpen) {
+                // 使用Date来避免被简单绕过
+                if (new Date().getTime() % 100 === 0) {
+                    // 随机干扰：只在特定条件下触发debugger
+                    // 注释掉实际的debugger语句，避免完全阻塞正常用户
+                    // debugger;
+                }
+            }
+        }, 1000);
+
+        // 方法4: 检测toString是否被重写
+        setInterval(function() {
+            if (!devToolsOpen) {
+                const result = Function.prototype.toString.call(function() {});
+                // 如果toString返回异常结果，可能在调试状态
+                if (typeof result !== 'string') {
+                    devToolsOpen = true;
+                    self.showWarning();
+                }
+            }
+        }, 2000);
+    },
+
+    /**
+     * 显示警告并尝试关闭开发者工具提示
+     */
+    showWarning: function() {
+        // 静默警告，不弹窗打扰正常用户
+        // 实际生产中可以记录日志到服务器
+        console.warn('检测到开发者工具行为');
     }
 };
 
