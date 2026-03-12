@@ -1,8 +1,16 @@
 """
 内容管理路由模块
+
+功能：
+- 获取内容列表和详情
+- 创建、删除内容
+- 评论管理
+- 内容点赞和评论点赞
+- 文件上传（带安全检查）
 """
 import json
 import os
+import time
 from flask import Blueprint, request, jsonify, session, current_app
 from werkzeug.utils import secure_filename
 from database import get_db
@@ -12,9 +20,36 @@ contents_bp = Blueprint('contents', __name__)
 
 
 def allowed_file(filename):
-    """检查文件类型是否允许"""
+    """
+    检查文件类型是否允许
+
+    安全说明：仅允许白名单中的文件扩展名，防止上传恶意文件
+    """
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
+
+
+def is_safe_path(base_path, user_path):
+    """
+    检查文件路径是否在允许的目录内（防止目录穿越攻击）
+
+    参数:
+        base_path: 基础目录（上传目录的绝对路径）
+        user_path: 用户提供的文件路径
+
+    返回:
+        bool: 路径安全返回True，否则返回False
+
+    安全说明：
+        使用os.path.realpath解析符号链接和../
+        确保最终路径仍然在base_path内
+    """
+    # 获取绝对路径并解析../
+    real_base = os.path.realpath(base_path)
+    real_path = os.path.realpath(os.path.join(base_path, user_path))
+
+    # 检查最终路径是否在基础目录内
+    return real_path.startswith(real_base)
 
 
 @contents_bp.route('/api/contents', methods=['GET'])
@@ -162,10 +197,15 @@ def create_content():
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 # 添加时间戳避免文件名冲突
-                import time
                 timestamp = int(time.time())
                 filename = f"{timestamp}_{filename}"
                 filepath = os.path.join(upload_folder, filename)
+
+                # 安全检查：确保文件路径在上传目录内（防止目录穿越攻击）
+                if not is_safe_path(upload_folder, filename):
+                    # 路径不安全，跳过此文件
+                    continue
+
                 file.save(filepath)
                 images.append(f'/uploads/{filename}')
 
@@ -238,6 +278,10 @@ def add_comment(content_id):
     body = request.json.get('body', '').strip() if request.json else ''
     if not body:
         return jsonify({'code': 400, 'message': '评论内容不能为空'}), 400
+
+    # 验证评论长度（防止大文本攻击）
+    if len(body) > 5000:
+        return jsonify({'code': 400, 'message': '评论内容过长，请精简后再提交'}), 400
 
     # 保存评论
     with get_db() as conn:
