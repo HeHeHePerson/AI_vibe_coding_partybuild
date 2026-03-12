@@ -303,24 +303,23 @@ const contents = {
 
         if (!comments || comments.length === 0) {
             commentsContainer.innerHTML = '<p style="color:#999;text-align:center;">暂无评论</p>';
-            return;
+        } else {
+            commentsContainer.innerHTML = comments.map(comment => {
+                const canDelete = currentUser && (currentUser.id === comment.user_id || currentUser.role === 'admin');
+                return `
+                    <div class="comment-item" data-id="${comment.id}">
+                        <div class="comment-header">
+                            <span class="comment-author">${utils.escapeHtml(comment.user_name)}</span>
+                            <span class="comment-time">${utils.formatDate(comment.created_at)}</span>
+                        </div>
+                        <div class="comment-body">${utils.escapeHtml(comment.body).replace(/\n/g, '<br>')}</div>
+                        ${canDelete ? `<div class="comment-actions"><button onclick="contents.deleteComment(${comment.id})">删除</button></div>` : ''}
+                    </div>
+                `;
+            }).join('');
         }
 
-        commentsContainer.innerHTML = comments.map(comment => {
-            const canDelete = currentUser && (currentUser.id === comment.user_id || currentUser.role === 'admin');
-            return `
-                <div class="comment-item" data-id="${comment.id}">
-                    <div class="comment-header">
-                        <span class="comment-author">${utils.escapeHtml(comment.user_name)}</span>
-                        <span class="comment-time">${utils.formatDate(comment.created_at)}</span>
-                    </div>
-                    <div class="comment-body">${utils.escapeHtml(comment.body).replace(/\n/g, '<br>')}</div>
-                    ${canDelete ? `<div class="comment-actions"><button onclick="contents.deleteComment(${comment.id})">删除</button></div>` : ''}
-                </div>
-            `;
-        }).join('');
-
-        // 评论表单显示
+        // 评论表单显示（始终检查，当前用户登录时显示）
         const commentForm = document.getElementById('commentForm');
         if (commentForm) {
             if (currentUser) {

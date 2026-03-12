@@ -83,7 +83,7 @@ def create_page():
 @app.route('/content/<int:content_id>')
 def content_page(content_id):
     """内容详情页面"""
-    return render_template('content.html', content_id=content_id)
+    return render_template('content.html', content_id=content_id, current_user=session.get('user'))
 
 
 # 路由：用户管理页面（管理员）
