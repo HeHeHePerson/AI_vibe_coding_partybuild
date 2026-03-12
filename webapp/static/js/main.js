@@ -149,13 +149,24 @@ const security = {
     },
 
     /**
-     * 显示警告并尝试关闭开发者工具提示
+     * 显示警告并跳转首页
      */
     showWarning: function() {
-        // 静默警告，不弹窗打扰正常用户
-        // 实际生产中可以记录日志到服务器
-        console.warn('检测到开发者工具行为');
-    }
+        // 防止重复触发
+        if (this.warningShown) {
+            return;
+        }
+        this.warningShown = true;
+
+        // 显示警告弹窗
+        alert('检测到开发者工具行为，请勿调试本页面');
+
+        // 弹窗关闭后跳转到首页
+        window.location.href = '/';
+    },
+
+    // 标记是否已显示过警告
+    warningShown: false
 };
 
 // 初始化安全防护（在页面加载时立即执行）
