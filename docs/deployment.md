@@ -99,11 +99,14 @@ CREATE TABLE IF NOT EXISTS `comments` (
   `content_id` INT NOT NULL,
   `user_id` INT NOT NULL,
   `body` TEXT NOT NULL,
+  `parent_id` INT DEFAULT NULL COMMENT '回复的评论ID，NULL表示顶级评论',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_content_id` (`content_id`),
   INDEX `idx_user_id` (`user_id`),
+  INDEX `idx_parent_id` (`parent_id`),
   FOREIGN KEY (`content_id`) REFERENCES `contents` (`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`parent_id`) REFERENCES `comments` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 内容点赞表
@@ -154,6 +157,10 @@ CREATE TABLE IF NOT EXISTS `notices` (
 
 ```sql
 USE party_building;
+
+-- 如果comments表已存在，添加parent_id字段（支持回复功能）
+ALTER TABLE `comments` ADD COLUMN `parent_id` INT DEFAULT NULL COMMENT '回复的评论ID，NULL表示顶级评论' AFTER `body`;
+ALTER TABLE `comments` ADD INDEX `idx_parent_id` (`parent_id`);
 
 -- 插入管理员账号（用户名：admin，密码：admin123）
 -- 密码使用bcrypt加密

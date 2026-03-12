@@ -480,20 +480,40 @@ const contents = {
             commentsContainer.innerHTML = comments.map(comment => {
                 const canDelete = currentUser && (currentUser.id === comment.user_id || currentUser.role === 'admin');
                 const canLike = currentUser !== null;
+                const canReply = currentUser !== null;
                 const likeBtnHtml = canLike
                     ? (comment.user_liked
                         ? `<button class="comment-like-btn liked" onclick="contents.toggleCommentLike(${comment.id}, true)">赞 (${comment.like_count || 0})</button>`
                         : `<button class="comment-like-btn" onclick="contents.toggleCommentLike(${comment.id}, false)">赞 (${comment.like_count || 0})</button>`)
                     : `<span class="comment-like-count">赞 (${comment.like_count || 0})</span>`;
+
+                // 判断是否为回复评论
+                const isReply = comment.parent_id !== null && comment.parent_id !== 0;
+                // 被回复的评论内容摘要（截取前50字符）
+                const parentBodyPreview = isReply && comment.parent_body
+                    ? (comment.parent_body.length > 50
+                        ? comment.parent_body.substring(0, 50) + '...'
+                        : comment.parent_body)
+                    : '';
+                const replyToHtml = isReply && comment.parent_user_name
+                    ? `<div class="comment-reply-to">
+                         <span class="reply-icon">↩</span>
+                         回复 <span class="reply-user">@${utils.escapeHtml(comment.parent_user_name)}</span>：
+                         <span class="reply-preview">${utils.escapeHtml(parentBodyPreview).replace(/\n/g, ' ')}</span>
+                       </div>`
+                    : '';
+
                 return `
-                    <div class="comment-item" data-id="${comment.id}">
+                    <div class="comment-item ${isReply ? 'comment-reply' : ''}" data-id="${comment.id}" data-parent-id="${comment.parent_id || ''}">
                         <div class="comment-header">
                             <span class="comment-author">${utils.escapeHtml(comment.user_name)}</span>
                             <span class="comment-time">${utils.formatDate(comment.created_at)}</span>
                         </div>
+                        ${replyToHtml}
                         <div class="comment-body">${utils.escapeHtml(comment.body).replace(/\n/g, '<br>')}</div>
                         <div class="comment-actions">
                             ${likeBtnHtml}
+                            ${canReply ? `<button class="comment-reply-btn" onclick="contents.showReplyForm(${comment.id}, '${utils.escapeHtml(comment.user_name)}')">回复</button>` : ''}
                             ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="contents.deleteComment(${comment.id})">删除</button>` : ''}
                         </div>
                     </div>
@@ -509,6 +529,118 @@ const contents = {
             } else {
                 commentForm.style.display = 'none';
             }
+        }
+
+        // 重置回复表单状态
+        this.cancelReply();
+    },
+
+    // 显示回复表单
+    showReplyForm: function(commentId, replyToUserName) {
+        // 隐藏原来的评论表单
+        const commentForm = document.getElementById('commentForm');
+        if (commentForm) {
+            commentForm.style.display = 'none';
+        }
+
+        // 创建或显示回复表单
+        let replyForm = document.getElementById('replyForm');
+        if (!replyForm) {
+            // 创建回复表单
+            const commentsList = document.getElementById('commentsList');
+            if (!commentsList) return;
+
+            replyForm = document.createElement('div');
+            replyForm.id = 'replyForm';
+            replyForm.className = 'reply-form';
+            replyForm.innerHTML = `
+                <div class="reply-form-header">
+                    <span>回复 <span id="replyToUser" class="reply-user"></span></span>
+                    <button type="button" class="btn btn-sm" onclick="contents.cancelReply()">取消</button>
+                </div>
+                <textarea id="replyBody" class="form-control" rows="3" placeholder="请输入回复内容..."></textarea>
+                <button type="button" class="btn btn-primary" onclick="contents.submitReply()">提交回复</button>
+            `;
+            commentsList.appendChild(replyForm);
+        }
+
+        // 设置回复信息
+        document.getElementById('replyToUser').textContent = replyToUserName;
+        replyForm.dataset.parentId = commentId;
+        replyForm.style.display = 'block';
+
+        // 高亮被回复的评论
+        this.highlightParentComment(commentId);
+
+        // 滚动到回复表单
+        replyForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+
+    // 高亮被回复的评论
+    highlightParentComment: function(parentId) {
+        // 移除之前的高亮
+        document.querySelectorAll('.comment-item.highlight').forEach(el => {
+            el.classList.remove('highlight');
+        });
+
+        // 查找并高亮父评论
+        const parentComment = document.querySelector(`.comment-item[data-id="${parentId}"]`);
+        if (parentComment) {
+            parentComment.classList.add('highlight');
+            // 3秒后移除高亮
+            setTimeout(() => {
+                parentComment.classList.remove('highlight');
+            }, 3000);
+        }
+    },
+
+    // 取消回复
+    cancelReply: function() {
+        const replyForm = document.getElementById('replyForm');
+        if (replyForm) {
+            replyForm.style.display = 'none';
+            delete replyForm.dataset.parentId;
+        }
+
+        // 移除高亮
+        document.querySelectorAll('.comment-item.highlight').forEach(el => {
+            el.classList.remove('highlight');
+        });
+
+        // 恢复显示原来的评论表单
+        const commentForm = document.getElementById('commentForm');
+        if (commentForm && currentUser) {
+            commentForm.style.display = 'block';
+        }
+    },
+
+    // 提交回复
+    submitReply: async function() {
+        const replyForm = document.getElementById('replyForm');
+        if (!replyForm || !replyForm.dataset.parentId) {
+            utils.showToast('请选择要回复的评论', 'error');
+            return;
+        }
+
+        const parentId = parseInt(replyForm.dataset.parentId);
+        const body = document.getElementById('replyBody').value.trim();
+        if (!body) {
+            utils.showToast('回复内容不能为空', 'error');
+            return;
+        }
+
+        const contentId = window.location.pathname.split('/').pop();
+        const result = await utils.api(`/api/contents/${contentId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ body: body, parent_id: parentId })
+        });
+
+        if (result.code === 200) {
+            utils.showToast('回复成功', 'success');
+            this.getDetail(contentId);
+        } else {
+            utils.showToast(result.message || '回复失败', 'error');
         }
     },
 

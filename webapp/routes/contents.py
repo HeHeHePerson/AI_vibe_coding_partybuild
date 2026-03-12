@@ -256,9 +256,13 @@ def get_comments(content_id):
     with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT cm.*, u.username as user_name
+                SELECT cm.*, u.username as user_name,
+                       p.user_id as parent_user_id, pu.username as parent_user_name,
+                       p.body as parent_body
                 FROM comments cm
                 JOIN users u ON cm.user_id = u.id
+                LEFT JOIN comments p ON cm.parent_id = p.id
+                LEFT JOIN users pu ON p.user_id = pu.id
                 WHERE cm.content_id = %s
                 ORDER BY cm.created_at DESC
             """, (content_id,))
@@ -283,6 +287,23 @@ def add_comment(content_id):
     if len(body) > 5000:
         return jsonify({'code': 400, 'message': '评论内容过长，请精简后再提交'}), 400
 
+    # 获取父评论ID（用于回复功能）
+    parent_id = request.json.get('parent_id') if request.json else None
+    # 验证parent_id有效性
+    if parent_id:
+        with get_db() as conn:
+            with conn.cursor() as cursor:
+                # 检查父评论是否存在且属于同一内容
+                cursor.execute(
+                    "SELECT id, content_id FROM comments WHERE id = %s",
+                    (parent_id,)
+                )
+                parent_comment = cursor.fetchone()
+                if not parent_comment:
+                    return jsonify({'code': 400, 'message': '回复的评论不存在'}), 400
+                if parent_comment['content_id'] != content_id:
+                    return jsonify({'code': 400, 'message': '不能回复其他内容的评论'}), 400
+
     # 保存评论
     with get_db() as conn:
         with conn.cursor() as cursor:
@@ -292,8 +313,8 @@ def add_comment(content_id):
                 return jsonify({'code': 404, 'message': '内容不存在'}), 404
 
             cursor.execute(
-                "INSERT INTO comments (content_id, user_id, body) VALUES (%s, %s, %s)",
-                (content_id, user_id, body)
+                "INSERT INTO comments (content_id, user_id, body, parent_id) VALUES (%s, %s, %s, %s)",
+                (content_id, user_id, body, parent_id)
             )
             comment_id = cursor.lastrowid
 
