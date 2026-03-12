@@ -102,3 +102,55 @@ def remove_like(content_id, user_id):
                 (content_id, user_id, today)
             )
             return cursor.rowcount > 0
+
+
+# 评论点赞相关函数
+def get_comment_like_count(comment_id):
+    """获取评论的点赞总数"""
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) as count FROM comment_likes WHERE comment_id = %s",
+                (comment_id,)
+            )
+            result = cursor.fetchone()
+            return result['count'] if result else 0
+
+
+def check_user_comment_liked_today(comment_id, user_id):
+    """检查用户今天是否已点赞评论"""
+    today = date.today()
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM comment_likes WHERE comment_id = %s AND user_id = %s AND created_at = %s",
+                (comment_id, user_id, today)
+            )
+            return cursor.fetchone() is not None
+
+
+def add_comment_like(comment_id, user_id):
+    """添加评论点赞"""
+    today = date.today()
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(
+                    "INSERT INTO comment_likes (comment_id, user_id, created_at) VALUES (%s, %s, %s)",
+                    (comment_id, user_id, today)
+                )
+                return True
+            except Exception:
+                return False
+
+
+def remove_comment_like(comment_id, user_id):
+    """移除评论点赞"""
+    today = date.today()
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM comment_likes WHERE comment_id = %s AND user_id = %s AND created_at = %s",
+                (comment_id, user_id, today)
+            )
+            return cursor.rowcount > 0

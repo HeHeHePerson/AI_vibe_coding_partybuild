@@ -83,6 +83,23 @@ def get_content(content_id):
             """, (content_id,))
             comments = cursor.fetchall()
 
+            # 获取每条评论的点赞数和用户是否已点赞
+            user_id = session.get('user_id')
+            for comment in comments:
+                # 评论点赞数
+                cursor.execute(
+                    "SELECT COUNT(*) as count FROM comment_likes WHERE comment_id = %s",
+                    (comment['id'],)
+                )
+                like_result = cursor.fetchone()
+                comment['like_count'] = like_result['count'] if like_result else 0
+
+                # 用户是否已点赞
+                comment['user_liked'] = False
+                if user_id:
+                    from webapp.utils.stats import check_user_comment_liked_today
+                    comment['user_liked'] = check_user_comment_liked_today(comment['id'], user_id)
+
             # 获取点赞数
             cursor.execute(
                 "SELECT COUNT(*) as count FROM likes WHERE content_id = %s",
@@ -304,6 +321,50 @@ def unlike_content(content_id):
 
     from webapp.utils.stats import remove_like
     if remove_like(content_id, user_id):
+        return jsonify({'code': 200, 'message': '取消点赞成功'})
+    else:
+        return jsonify({'code': 400, 'message': '取消点赞失败'}), 400
+
+
+# 评论点赞路由
+@contents_bp.route('/api/comments/<int:comment_id>/like', methods=['POST'])
+def like_comment(comment_id):
+    """点赞评论"""
+    # 检查登录
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'code': 401, 'message': '请先登录'}), 401
+
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            # 检查评论是否存在
+            cursor.execute("SELECT id FROM comments WHERE id = %s", (comment_id,))
+            if not cursor.fetchone():
+                return jsonify({'code': 404, 'message': '评论不存在'}), 404
+
+            # 检查今天是否已点赞
+            from webapp.utils.stats import check_user_comment_liked_today
+            if check_user_comment_liked_today(comment_id, user_id):
+                return jsonify({'code': 400, 'message': '今天已经点赞过了'}), 400
+
+            # 添加点赞
+            from webapp.utils.stats import add_comment_like
+            if add_comment_like(comment_id, user_id):
+                return jsonify({'code': 200, 'message': '点赞成功'})
+            else:
+                return jsonify({'code': 500, 'message': '点赞失败'}), 500
+
+
+@contents_bp.route('/api/comments/<int:comment_id>/like', methods=['DELETE'])
+def unlike_comment(comment_id):
+    """取消点赞评论"""
+    # 检查登录
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'code': 401, 'message': '请先登录'}), 401
+
+    from webapp.utils.stats import remove_comment_like
+    if remove_comment_like(comment_id, user_id):
         return jsonify({'code': 200, 'message': '取消点赞成功'})
     else:
         return jsonify({'code': 400, 'message': '取消点赞失败'}), 400

@@ -306,6 +306,12 @@ const contents = {
         } else {
             commentsContainer.innerHTML = comments.map(comment => {
                 const canDelete = currentUser && (currentUser.id === comment.user_id || currentUser.role === 'admin');
+                const canLike = currentUser !== null;
+                const likeBtnHtml = canLike
+                    ? (comment.user_liked
+                        ? `<button class="comment-like-btn liked" onclick="contents.toggleCommentLike(${comment.id}, true)">赞 (${comment.like_count || 0})</button>`
+                        : `<button class="comment-like-btn" onclick="contents.toggleCommentLike(${comment.id}, false)">赞 (${comment.like_count || 0})</button>`)
+                    : `<span class="comment-like-count">赞 (${comment.like_count || 0})</span>`;
                 return `
                     <div class="comment-item" data-id="${comment.id}">
                         <div class="comment-header">
@@ -313,7 +319,10 @@ const contents = {
                             <span class="comment-time">${utils.formatDate(comment.created_at)}</span>
                         </div>
                         <div class="comment-body">${utils.escapeHtml(comment.body).replace(/\n/g, '<br>')}</div>
-                        ${canDelete ? `<div class="comment-actions"><button onclick="contents.deleteComment(${comment.id})">删除</button></div>` : ''}
+                        <div class="comment-actions">
+                            ${likeBtnHtml}
+                            ${canDelete ? `<button onclick="contents.deleteComment(${comment.id})">删除</button>` : ''}
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -327,6 +336,35 @@ const contents = {
             } else {
                 commentForm.style.display = 'none';
             }
+        }
+    },
+
+    // 切换评论点赞
+    toggleCommentLike: async function(commentId, currentlyLiked) {
+        if (!currentUser) {
+            window.location.href = '/login';
+            return;
+        }
+
+        let result;
+        if (currentlyLiked) {
+            // 取消点赞
+            result = await utils.api(`/api/comments/${commentId}/like`, {
+                method: 'DELETE'
+            });
+        } else {
+            // 添加点赞
+            result = await utils.api(`/api/comments/${commentId}/like`, {
+                method: 'POST'
+            });
+        }
+
+        if (result.code === 200) {
+            // 刷新页面以更新点赞状态
+            const contentId = window.location.pathname.split('/').pop();
+            this.getDetail(contentId);
+        } else {
+            utils.showToast(result.message || '操作失败', 'error');
         }
     },
 
