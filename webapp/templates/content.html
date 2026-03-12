@@ -44,8 +44,10 @@ function addComment() {
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 加载内容详情
-    contents.getDetail({{ content_id }});
+    // 先检查登录状态，再加载内容详情
+    auth.checkAuth().then(function() {
+        contents.getDetail({{ content_id }});
+    });
 });
 </script>
 {% endblock %}
