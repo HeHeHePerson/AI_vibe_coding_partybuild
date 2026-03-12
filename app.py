@@ -8,10 +8,11 @@ from config import (
     UPLOAD_FOLDER, ALLOWED_EXTENSIONS, MAX_CONTENT_LENGTH
 )
 from database import init_db
-from app.utils.stats import record_visit
+from webapp.utils.stats import record_visit
 
 # 创建Flask应用
-app = Flask(__name__)
+application = Flask(__name__)
+app = application
 app.secret_key = SECRET_KEY
 
 # 配置
@@ -23,10 +24,10 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # 注册蓝图
-from app.routes.auth import auth_bp
-from app.routes.users import users_bp
-from app.routes.contents import contents_bp
-from app.routes.stats import stats_bp
+from webapp.routes.auth import auth_bp
+from webapp.routes.users import users_bp
+from webapp.routes.contents import contents_bp
+from webapp.routes.stats import stats_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)

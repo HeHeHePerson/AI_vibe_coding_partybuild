@@ -6,7 +6,7 @@ import os
 from flask import Blueprint, request, jsonify, session, current_app
 from werkzeug.utils import secure_filename
 from database import get_db
-from app.utils.security import escape_html, validate_title, validate_content
+from webapp.utils.security import escape_html, validate_title, validate_content
 
 contents_bp = Blueprint('contents', __name__)
 
@@ -89,7 +89,7 @@ def get_content(content_id):
             user_liked = False
             user_id = session.get('user_id')
             if user_id:
-                from app.utils.stats import check_user_liked_today
+                from webapp.utils.stats import check_user_liked_today
                 user_liked = check_user_liked_today(content_id, user_id)
 
             # 转义HTML
@@ -276,12 +276,12 @@ def like_content(content_id):
                 return jsonify({'code': 404, 'message': '内容不存在'}), 404
 
             # 检查今天是否已点赞
-            from app.utils.stats import check_user_liked_today
+            from webapp.utils.stats import check_user_liked_today
             if check_user_liked_today(content_id, user_id):
                 return jsonify({'code': 400, 'message': '今天已经点赞过了'}), 400
 
             # 添加点赞
-            from app.utils.stats import add_like
+            from webapp.utils.stats import add_like
             if add_like(content_id, user_id):
                 return jsonify({'code': 200, 'message': '点赞成功'})
             else:
@@ -296,7 +296,7 @@ def unlike_content(content_id):
     if not user_id:
         return jsonify({'code': 401, 'message': '请先登录'}), 401
 
-    from app.utils.stats import remove_like
+    from webapp.utils.stats import remove_like
     if remove_like(content_id, user_id):
         return jsonify({'code': 200, 'message': '取消点赞成功'})
     else:

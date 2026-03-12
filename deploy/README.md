@@ -72,7 +72,7 @@ party-building-system/
 ├── config.py              # 配置文件
 ├── database.py            # 数据库连接模块
 ├── requirements.txt       # Python依赖
-├── app/
+├── webapp/
 │   ├── routes/            # 路由模块
 │   │   ├── auth.py        # 认证路由
 │   │   ├── users.py       # 用户管理路由
@@ -87,8 +87,8 @@ party-building-system/
 │   │   │   └── style.css
 │   │   └── js/
 │   │       └── main.js
-│   └── templates/         # HTML模板
-├── uploads/               # 上传的图片目录
+│   ├── templates/         # HTML模板
+│   └── uploads/           # 上传的图片目录
 ├── db/
 │   └── init.sql          # 数据库初始化脚本
 └── deploy/
