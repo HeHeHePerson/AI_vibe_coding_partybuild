@@ -22,7 +22,10 @@ const utils = {
     // 格式化日期
     formatDate: function(dateStr) {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
+        // 将空格替换为T，确保ISO格式兼容
+        const dateStrFixed = dateStr.replace(' ', 'T');
+        const date = new Date(dateStrFixed);
+        if (isNaN(date.getTime())) return dateStr; // 如果解析失败，返回原始字符串
         return date.toLocaleString('zh-CN', {
             year: 'numeric',
             month: '2-digit',
@@ -35,7 +38,9 @@ const utils = {
     // 格式化日期(仅日期)
     formatDateOnly: function(dateStr) {
         if (!dateStr) return '';
-        const date = new Date(dateStr);
+        const dateStrFixed = dateStr.replace(' ', 'T');
+        const date = new Date(dateStrFixed);
+        if (isNaN(date.getTime())) return dateStr;
         return date.toLocaleDateString('zh-CN');
     },
 
