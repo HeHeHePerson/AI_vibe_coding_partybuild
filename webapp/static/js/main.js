@@ -1,8 +1,23 @@
 /*
 智慧党建系统 - JavaScript
+
+模块说明：
+- utils: 通用工具函数（提示消息、日期格式化、API请求、HTML转义）
+- auth: 用户认证（登录、注册、登出、状态检查）
+- contents: 内容管理（列表、详情、发布、删除、评论、点赞）
+- stats: 访问统计
+- userManage: 用户管理（管理员功能）
+
+全局变量：
+- currentUser: 当前登录用户对象，未登录时为null
+
+依赖：
+- 需要页面包含相应的DOM元素（userInfo, navLinks, contentList等）
+- API响应格式：{ code: 200, data: {...}, message: "..." }
 */
 
-// 全局变量
+// 全局变量：当前登录用户
+// 结构：{ id: number, username: string, role: 'user'|'admin' }
 let currentUser = null;
 
 // 工具函数
