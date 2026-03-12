@@ -414,6 +414,18 @@ body {
     color: var(--primary-red);
 }
 
+.interaction-bar button.btn-danger {
+    background: #dc3545;
+    color: var(--white);
+    border-color: #dc3545;
+}
+
+.interaction-bar button.btn-danger:hover {
+    background: #c82333;
+    border-color: #c82333;
+    color: var(--white);
+}
+
 /* 评论区域 */
 .comments-section {
     background: var(--white);
