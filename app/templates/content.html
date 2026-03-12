@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}内容详情 - 智慧党建系统{% endblock %}
+
+{% block content %}
+<div class="content-detail" id="contentDetail">
+    <p style="text-align:center;color:#999;">加载中...</p>
+</div>
+
+<div class="interaction-bar">
+    <button id="likeBtn">
+        <span>点赞 (0)</span>
+    </button>
+    {% if current_user %}
+    <button id="deleteBtn" class="btn btn-danger" style="display:none;">
+        删除内容
+    </button>
+    {% endif %}
+</div>
+
+<!-- 评论区域 -->
+<div class="comments-section">
+    <h3>评论</h3>
+
+    <div class="comment-form" id="commentForm" style="display:none;">
+        <textarea id="commentBody" placeholder="请输入评论内容"></textarea>
+        <button class="btn btn-primary" onclick="addComment()">提交评论</button>
+    </div>
+
+    <div class="comments-list" id="commentsList">
+        <p style="text-align:center;color:#999;">加载中...</p>
+    </div>
+</div>
+
+<script>
+var contentId = {{ content_id }};
+
+function addComment() {
+    contents.addComment(contentId);
+}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 加载内容详情
+    contents.getDetail({{ content_id }});
+});
+</script>
+{% endblock %}

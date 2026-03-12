@@ -174,3 +174,10 @@
 *.lz
 *.lzma
 *.iso
+
+# Flask
+instance/
+*.db
+
+# Uploads
+/uploads/*

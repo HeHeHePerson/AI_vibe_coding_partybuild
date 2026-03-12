@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>错误 {{ error_code }} - 智慧党建系统</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo">
+                <div class="logo-icon">党</div>
+                <span>智慧党建</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="/">首页</a>
+            </div>
+            <div class="user-info" id="userInfo">
+                <a href="/login" class="btn btn-outline btn-sm">登录</a>
+                <a href="/register" class="btn btn-secondary btn-sm">注册</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 错误内容 -->
+    <main class="container">
+        <div class="error-page">
+            <h1>{{ error_code }}</h1>
+            <p>{{ message }}</p>
+            <a href="/" class="btn btn-primary">返回首页</a>
+        </div>
+    </main>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

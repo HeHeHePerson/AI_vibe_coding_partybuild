@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}用户注册 - 智慧党建系统{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>用户注册</h1>
+    <form id="registerForm">
+        <div class="form-group">
+            <label for="username">用户名</label>
+            <input type="text" id="username" name="username" required placeholder="请输入用户名（2-50个字符）">
+        </div>
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input type="password" id="password" name="password" required placeholder="请输入密码（至少6个字符）">
+        </div>
+        <div class="form-group">
+            <label for="confirmPassword">确认密码</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="请再次输入密码">
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">注册</button>
+        </div>
+    </form>
+    <div class="form-footer">
+        <p>已有账号？<a href="/login">立即登录</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (password !== confirmPassword) {
+        utils.showToast('两次输入的密码不一致', 'error');
+        return;
+    }
+
+    if (password.length < 6) {
+        utils.showToast('密码长度至少6个字符', 'error');
+        return;
+    }
+
+    auth.register(username, password);
+});
+</script>
+{% endblock %}

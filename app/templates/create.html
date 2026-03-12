@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}发布内容 - 智慧党建系统{% endblock %}
+
+{% block content %}
+<div class="form-container" style="max-width:800px;">
+    <h1>发布党建内容</h1>
+    <form id="createForm">
+        <div class="form-group">
+            <label for="title">标题</label>
+            <input type="text" id="title" name="title" required placeholder="请输入标题" style="font-size:16px;">
+        </div>
+        <div class="form-group">
+            <label for="body">内容</label>
+            <textarea id="body" name="body" required placeholder="请输入内容" style="min-height:300px;line-height:1.8;"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="images">图片（可选）</label>
+            <input type="file" id="images" name="images" accept="image/*" multiple>
+            <p style="font-size:12px;color:#999;margin-top:5px;">支持同时上传多张图片</p>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">发布</button>
+            <a href="/" class="btn" style="margin-left:10px;">取消</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('createForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const title = document.getElementById('title').value.trim();
+    const body = document.getElementById('body').value.trim();
+
+    if (!title) {
+        utils.showToast('标题不能为空', 'error');
+        return;
+    }
+
+    if (!body) {
+        utils.showToast('内容不能为空', 'error');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('body', body);
+
+    const imageFiles = document.getElementById('images').files;
+    for (let i = 0; i < imageFiles.length; i++) {
+        formData.append('images', imageFiles[i]);
+    }
+
+    contents.create(formData);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}党建之声 - 智慧党建系统{% endblock %}
+
+{% block content %}
+<!-- 统计区域 -->
+<div class="stats-bar">
+    <div class="stat-card">
+        <h3>今日访问</h3>
+        <div class="number" id="todayCount">0</div>
+    </div>
+    <div class="stat-card">
+        <h3>本月访问</h3>
+        <div class="number" id="monthCount">0</div>
+    </div>
+    <div class="stat-card">
+        <h3>总访问量</h3>
+        <div class="number" id="totalCount">0</div>
+    </div>
+</div>
+
+<!-- 内容列表 -->
+<div class="content-list" id="contentList">
+    <div class="content-item">
+        <p style="text-align:center;color:#999;">加载中...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 加载统计数据
+    stats.getStats();
+
+    // 加载内容列表
+    contents.getList();
+});
+</script>
+{% endblock %}
