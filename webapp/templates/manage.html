@@ -78,7 +78,9 @@ document.getElementById('addUserForm').addEventListener('submit', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-    userManage.getUsers();
+    auth.checkAuth().then(function() {
+        userManage.getUsers();
+    });
 });
 </script>
 {% endblock %}

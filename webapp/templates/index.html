@@ -30,11 +30,14 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 加载统计数据
-    stats.getStats();
+    // 初始化用户登录状态
+    auth.checkAuth().then(function() {
+        // 加载统计数据
+        stats.getStats();
 
-    // 加载内容列表
-    contents.getList();
+        // 加载内容列表
+        contents.getList();
+    });
 });
 </script>
 {% endblock %}
