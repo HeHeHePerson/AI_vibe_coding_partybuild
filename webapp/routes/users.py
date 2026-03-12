@@ -2,11 +2,11 @@
 用户管理路由模块
 """
 from flask import Blueprint, request, jsonify, session
-from app.utils.auth import (
+from webapp.utils.auth import (
     create_user, get_all_users, get_user_by_id,
     delete_user, get_user_by_username
 )
-from app.utils.security import validate_username, validate_password
+from webapp.utils.security import validate_username, validate_password
 
 users_bp = Blueprint('users', __name__)
 

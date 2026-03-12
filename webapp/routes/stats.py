@@ -2,7 +2,7 @@
 统计路由模块
 """
 from flask import Blueprint, jsonify
-from app.utils.stats import record_visit, get_visit_stats, get_content_like_count
+from webapp.utils.stats import record_visit, get_visit_stats, get_content_like_count
 
 stats_bp = Blueprint('stats', __name__)
 

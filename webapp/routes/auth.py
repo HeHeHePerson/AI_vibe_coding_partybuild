@@ -2,12 +2,12 @@
 认证路由模块
 """
 from flask import Blueprint, request, jsonify, session
-from app.utils.auth import (
+from webapp.utils.auth import (
     create_user, get_user_by_username, get_user_by_id,
     verify_password
 )
-from app.utils.security import validate_username, validate_password
-from app.utils.stats import record_visit
+from webapp.utils.security import validate_username, validate_password
+from webapp.utils.stats import record_visit
 
 auth_bp = Blueprint('auth', __name__)
 
