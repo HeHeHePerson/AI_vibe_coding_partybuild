@@ -16,7 +16,21 @@ DB_NAME = os.environ.get('DB_NAME', 'party_building')
 # 文件上传配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'webapp', 'uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+# 允许的图片和文档格式（不允许可执行脚本如 jsp, py, asp, php 等）
+ALLOWED_EXTENSIONS = {
+    # 图片格式
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp',
+    # Word文档
+    'doc', 'docx',
+    # Excel表格
+    'xls', 'xlsx',
+    # PowerPoint演示文稿
+    'ppt', 'pptx',
+    # PDF
+    'pdf',
+    # 文本文件
+    'txt'
+}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
 
 # Session配置

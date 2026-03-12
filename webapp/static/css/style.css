@@ -337,6 +337,51 @@ body {
     border-radius: 8px;
 }
 
+/* 附件样式 */
+.content-detail .attachments {
+    margin-top: 30px;
+}
+
+.content-detail .files {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.content-detail .files h4 {
+    color: var(--primary-red);
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.content-detail .file-item {
+    margin-bottom: 10px;
+}
+
+.content-detail .file-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background: var(--white);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.content-detail .file-link:hover {
+    border-color: var(--primary-red);
+    color: var(--primary-red);
+    background: var(--light-red);
+}
+
+.content-detail .file-icon {
+    font-size: 18px;
+}
+
 /* 点赞和评论区域 */
 .interaction-bar {
     display: flex;

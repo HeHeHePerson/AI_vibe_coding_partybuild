@@ -218,11 +218,38 @@ const contents = {
         // 渲染内容
         const contentContainer = document.getElementById('contentDetail');
         if (contentContainer) {
-            let imagesHtml = '';
+            // 处理附件显示
+            let attachmentsHtml = '';
             if (content.images && content.images.length > 0) {
-                imagesHtml = '<div class="images">' +
-                    content.images.map(img => `<img src="${utils.escapeHtml(img)}" alt="配图">`).join('') +
-                    '</div>';
+                const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'];
+                let imagesPart = '';
+                let filesPart = '';
+
+                content.images.forEach(file => {
+                    const ext = file.split('.').pop().toLowerCase();
+                    const filename = file.split('/').pop();
+                    if (imageExtensions.includes(ext)) {
+                        // 图片文件
+                        imagesPart += `<img src="${utils.escapeHtml(file)}" alt="图片">`;
+                    } else {
+                        // 文档文件显示为下载链接
+                        filesPart += `<div class="file-item">
+                            <a href="${utils.escapeHtml(file)}" target="_blank" class="file-link">
+                                <span class="file-icon">📄</span>
+                                ${utils.escapeHtml(decodeURIComponent(filename))}
+                            </a>
+                        </div>`;
+                    }
+                });
+
+                attachmentsHtml = '<div class="attachments">';
+                if (imagesPart) {
+                    attachmentsHtml += '<div class="images">' + imagesPart + '</div>';
+                }
+                if (filesPart) {
+                    attachmentsHtml += '<div class="files"><h4>附件：</h4>' + filesPart + '</div>';
+                }
+                attachmentsHtml += '</div>';
             }
 
             contentContainer.innerHTML = `
@@ -232,7 +259,7 @@ const contents = {
                     <span>发布时间: ${utils.formatDate(content.created_at)}</span>
                 </div>
                 <div class="body">${utils.escapeHtml(content.body).replace(/\n/g, '<br>')}</div>
-                ${imagesHtml}
+                ${attachmentsHtml}
             `;
         }
 
