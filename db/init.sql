@@ -37,11 +37,14 @@ CREATE TABLE IF NOT EXISTS comments (
     content_id INT NOT NULL COMMENT '关联内容ID',
     user_id INT NOT NULL COMMENT '评论者ID',
     body TEXT NOT NULL COMMENT '评论内容',
+    parent_id INT DEFAULT NULL COMMENT '父评论ID，用于回复功能',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '评论时间',
     INDEX idx_content (content_id),
     INDEX idx_user (user_id),
+    INDEX idx_parent (parent_id),
     FOREIGN KEY (content_id) REFERENCES contents(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='评论表';
 
 -- 点赞表

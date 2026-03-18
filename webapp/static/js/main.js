@@ -499,8 +499,10 @@ const contents = {
                         : `<button class="comment-like-btn" onclick="contents.toggleCommentLike(${comment.id}, false)">赞 (${comment.like_count || 0})</button>`)
                     : `<span class="comment-like-count">赞 (${comment.like_count || 0})</span>`;
 
-                // 判断是否为回复评论
-                const isReply = comment.parent_id !== null && comment.parent_id !== 0;
+                // 判断是否为回复评论（处理字符串和数字类型，包括数据库返回的 "null" 字符串）
+                const parentId = comment.parent_id;
+                const parentIdStr = String(parentId);
+                const isReply = parentIdStr !== '' && parentIdStr !== 'null' && parentIdStr !== 'undefined' && parentIdStr !== '0';
                 // 被回复的评论内容摘要（截取前50字符）
                 const parentBodyPreview = isReply && comment.parent_body
                     ? (comment.parent_body.length > 50
@@ -642,9 +644,10 @@ const contents = {
         }
 
         const contentId = window.location.pathname.split('/').pop();
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api(`/api/contents/${contentId}/comments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             body: JSON.stringify({ body: body, parent_id: parentId })
         });
 
@@ -663,16 +666,19 @@ const contents = {
             return;
         }
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         let result;
         if (currentlyLiked) {
             // 取消点赞
             result = await utils.api(`/api/comments/${commentId}/like`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': csrfToken }
             });
         } else {
             // 添加点赞
             result = await utils.api(`/api/comments/${commentId}/like`, {
-                method: 'POST'
+                method: 'POST',
+                headers: { 'X-CSRF-Token': csrfToken }
             });
         }
 
@@ -698,9 +704,10 @@ const contents = {
             return;
         }
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api(`/api/contents/${contentId}/comments`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
             body: JSON.stringify({ body })
         });
 
@@ -717,8 +724,10 @@ const contents = {
     deleteComment: async function(commentId) {
         if (!confirm('确定要删除这条评论吗?')) return;
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api(`/api/comments/${commentId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
         });
 
         if (result.code === 200) {
@@ -759,8 +768,10 @@ const contents = {
     deleteContent: async function(contentId) {
         if (!confirm('确定要删除这篇内容吗？此操作不可恢复！')) return;
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api(`/api/contents/${contentId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
         });
 
         if (result.code === 200) {
