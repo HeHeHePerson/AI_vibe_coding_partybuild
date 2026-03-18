@@ -254,13 +254,13 @@ const auth = {
     updateUI: function() {
         const userInfo = document.getElementById('userInfo');
         const navLinks = document.getElementById('navLinks');
-        const loginBtn = document.getElementById('loginBtn');
 
         if (currentUser) {
             if (userInfo) {
                 userInfo.innerHTML = `
                     <span class="username">${utils.escapeHtml(currentUser.username)}</span>
                     ${currentUser.role === 'admin' ? '<span class="role-badge admin">管理员</span>' : ''}
+                    <a href="/profile" class="btn btn-outline btn-sm">资料</a>
                     <a href="javascript:auth.logout()" class="btn btn-outline btn-sm">退出</a>
                 `;
             }

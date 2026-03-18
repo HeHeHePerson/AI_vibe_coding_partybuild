@@ -198,6 +198,16 @@ def notices_page():
     return render_template('notices.html')
 
 
+# 路由：个人资料页面
+@app.route('/profile')
+def profile_page():
+    """个人资料页面"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login_page'))
+    return render_template('profile.html', current_user=user)
+
+
 # 错误处理
 @app.errorhandler(404)
 def not_found(e):
