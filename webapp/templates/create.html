@@ -6,6 +6,7 @@
 <div class="form-container" style="max-width:800px;">
     <h1>发布党建内容</h1>
     <form id="createForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label for="title">标题</label>
             <input type="text" id="title" name="title" required placeholder="请输入标题" style="font-size:16px;">

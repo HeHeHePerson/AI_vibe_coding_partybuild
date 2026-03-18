@@ -34,6 +34,7 @@
             <h3>新增用户</h3>
         </div>
         <form id="addUserForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="newUsername">用户名</label>
                 <input type="text" id="newUsername" required placeholder="请输入用户名">

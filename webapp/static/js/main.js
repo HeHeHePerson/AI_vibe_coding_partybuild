@@ -775,6 +775,11 @@ const contents = {
 
     // 创建内容
     create: async function(formData) {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+        if (csrfToken) {
+            formData.append('csrf_token', csrfToken);
+        }
+        
         const result = await utils.api('/api/contents', {
             method: 'POST',
             body: formData
@@ -847,9 +852,13 @@ const userManage = {
 
     // 创建用户
     createUser: async function(username, password, role) {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api('/api/users', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
             body: JSON.stringify({ username, password, role })
         });
 
@@ -867,8 +876,10 @@ const userManage = {
     deleteUser: async function(userId) {
         if (!confirm('确定要删除该用户吗？')) return;
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api(`/api/users/${userId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
         });
 
         if (result.code === 200) {

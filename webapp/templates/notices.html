@@ -10,6 +10,7 @@
     <div class="form-container" style="max-width:800px;margin-bottom:30px;">
         <h3>发布新公告</h3>
         <form id="noticeForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="form-group">
                 <label for="title">公告标题</label>
                 <input type="text" id="title" name="title" required placeholder="请输入公告标题" style="font-size:16px;">
@@ -75,9 +76,13 @@ const notices = {
 
     // 创建公告
     create: async function(title, content) {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api('/api/notices', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
             body: JSON.stringify({ title, content })
         });
 
@@ -94,8 +99,10 @@ const notices = {
     deleteNotice: async function(noticeId) {
         if (!confirm('确定要删除这条公告吗？')) return;
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api(`/api/notices/${noticeId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken }
         });
 
         if (result.code === 200) {
