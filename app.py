@@ -11,6 +11,7 @@ from config import (
 )
 from database import init_db
 from webapp.utils.stats import record_visit
+from webapp.utils.csrf import generate_csrf_token, validate_csrf_token, get_csrf_token_from_request
 
 # 创建Flask应用
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -51,12 +52,16 @@ from webapp.routes.users import users_bp
 from webapp.routes.contents import contents_bp
 from webapp.routes.stats import stats_bp
 from webapp.routes.notices import notices_bp
+from webapp.routes.profile import profile_bp
+from webapp.routes.categories import categories_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(contents_bp)
 app.register_blueprint(stats_bp)
 app.register_blueprint(notices_bp)
+app.register_blueprint(profile_bp)
+app.register_blueprint(categories_bp)
 
 
 # 请求日志记录中间件
@@ -215,6 +220,25 @@ def init_app():
     except Exception as e:
         print(f"数据库连接失败: {e}")
         print("请确保MySQL已启动并配置正确!")
+
+
+@app.context_processor
+def inject_csrf_token():
+    """向模板注入CSRF令牌"""
+    return dict(csrf_token=generate_csrf_token())
+
+
+CSRF_PROTECTED_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH']
+
+
+@app.before_request
+def csrf_protect():
+    """CSRF保护中间件"""
+    if request.method in CSRF_PROTECTED_METHODS:
+        token = get_csrf_token_from_request()
+        if not token or not validate_csrf_token(token):
+            from flask import jsonify
+            return jsonify({'code': 403, 'message': 'CSRF令牌验证失败，请刷新页面后重试'}), 403
 
 
 if __name__ == '__main__':

@@ -15,6 +15,7 @@ from flask import Blueprint, request, jsonify, session, current_app
 from werkzeug.utils import secure_filename
 from database import get_db
 from webapp.utils.security import escape_html, validate_title, validate_content
+from webapp.utils.operation_log import log_operation
 
 contents_bp = Blueprint('contents', __name__)
 
@@ -55,19 +56,52 @@ def is_safe_path(base_path, user_path):
 @contents_bp.route('/api/contents', methods=['GET'])
 def get_contents():
     """获取内容列表"""
+    keyword = request.args.get('keyword', '').strip()
+    category_id = request.args.get('category_id', type=int)
+    tag_id = request.args.get('tag_id', type=int)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    
+    per_page = min(per_page, 100)
+    offset = (page - 1) * per_page
+    
     with get_db() as conn:
         with conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT c.id, c.title, c.images,
+            where_conditions = []
+            params = []
+            
+            if keyword:
+                where_conditions.append("(c.title LIKE %s OR c.body LIKE %s)")
+                params.extend([f'%{keyword}%', f'%{keyword}%'])
+            
+            if category_id:
+                where_conditions.append("c.category_id = %s")
+                params.append(category_id)
+            
+            if tag_id:
+                where_conditions.append("EXISTS (SELECT 1 FROM content_tags ct WHERE ct.content_id = c.id AND ct.tag_id = %s)")
+                params.append(tag_id)
+            
+            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            
+            count_sql = f"SELECT COUNT(*) as total FROM contents c WHERE {where_clause}"
+            cursor.execute(count_sql, params)
+            total = cursor.fetchone()['total']
+            
+            sql = f"""
+                SELECT c.id, c.title, c.images, c.category_id,
                        c.created_at as created_at,
                        u.username as author_name
                 FROM contents c
                 JOIN users u ON c.author_id = u.id
+                WHERE {where_clause}
                 ORDER BY c.created_at DESC
-            """)
+                LIMIT %s OFFSET %s
+            """
+            params.extend([per_page, offset])
+            cursor.execute(sql, params)
             contents = cursor.fetchall()
 
-            # 处理图片JSON
             for content in contents:
                 if content['images']:
                     if isinstance(content['images'], str):
@@ -75,10 +109,18 @@ def get_contents():
                 else:
                     content['images'] = []
 
-                # 转义HTML
                 content['title'] = escape_html(content['title'])
 
-            return jsonify({'code': 200, 'data': contents})
+            return jsonify({
+                'code': 200,
+                'data': contents,
+                'pagination': {
+                    'total': total,
+                    'page': page,
+                    'per_page': per_page,
+                    'pages': (total + per_page - 1) // per_page
+                }
+            })
 
 
 @contents_bp.route('/api/contents/<int:content_id>', methods=['GET'])
@@ -169,16 +211,15 @@ def get_content(content_id):
 @contents_bp.route('/api/contents', methods=['POST'])
 def create_content():
     """创建内容"""
-    # 检查登录
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'code': 401, 'message': '请先登录'}), 401
 
-    # 获取表单数据
     title = request.form.get('title', '').strip()
     body = request.form.get('body', '').strip()
+    category_id = request.form.get('category_id', type=int)
+    tag_ids = request.form.getlist('tag_ids')
 
-    # 验证
     valid, msg = validate_title(title)
     if not valid:
         return jsonify({'code': 400, 'message': msg}), 400
@@ -187,7 +228,6 @@ def create_content():
     if not valid:
         return jsonify({'code': 400, 'message': msg}), 400
 
-    # 处理上传的图片
     images = []
     if 'images' in request.files:
         files = request.files.getlist('images')
@@ -195,28 +235,39 @@ def create_content():
 
         for file in files:
             if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                # 添加时间戳避免文件名冲突
+                filename = secure_filename(file.filename) if file.filename else ''
+                if not filename:
+                    continue
                 timestamp = int(time.time())
                 filename = f"{timestamp}_{filename}"
                 filepath = os.path.join(upload_folder, filename)
 
-                # 安全检查：确保文件路径在上传目录内（防止目录穿越攻击）
                 if not is_safe_path(upload_folder, filename):
-                    # 路径不安全，跳过此文件
                     continue
 
                 file.save(filepath)
                 images.append(f'/uploads/{filename}')
 
-    # 保存到数据库
     with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO contents (title, body, images, author_id) VALUES (%s, %s, %s, %s)",
-                (title, body, json.dumps(images), user_id)
+                "INSERT INTO contents (title, body, images, author_id, category_id) VALUES (%s, %s, %s, %s, %s)",
+                (title, body, json.dumps(images), user_id, category_id)
             )
             content_id = cursor.lastrowid
+
+            if tag_ids:
+                for tag_id in tag_ids:
+                    try:
+                        tag_id = int(tag_id)
+                        cursor.execute(
+                            "INSERT INTO content_tags (content_id, tag_id) VALUES (%s, %s)",
+                            (content_id, tag_id)
+                        )
+                    except (ValueError, TypeError):
+                        pass
+
+    log_operation('create_content', {'content_id': content_id, 'title': title})
 
     return jsonify({'code': 200, 'message': '创建成功', 'data': {'id': content_id}})
 

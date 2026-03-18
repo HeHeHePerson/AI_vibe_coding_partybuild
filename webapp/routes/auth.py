@@ -8,6 +8,7 @@ from webapp.utils.auth import (
 )
 from webapp.utils.security import validate_username, validate_password
 from webapp.utils.stats import record_visit
+from webapp.utils.login_security import handle_login_attempt, is_account_locked
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -22,21 +23,32 @@ def login():
     if not username or not password:
         return jsonify({'code': 400, 'message': '用户名和密码不能为空'}), 400
 
-    # 验证用户名格式
     valid, msg = validate_username(username)
     if not valid:
         return jsonify({'code': 400, 'message': msg}), 400
 
-    # 获取用户
+    locked, remaining = is_account_locked(username)
+    if locked:
+        minutes = remaining // 60
+        seconds = remaining % 60
+        if minutes > 0:
+            return jsonify({'code': 403, 'message': f'账户已被锁定，请{minutes}分{seconds}秒后再试'}), 403
+        else:
+            return jsonify({'code': 403, 'message': f'账户已被锁定，请{seconds}秒后再试'}), 403
+
     user = get_user_by_username(username)
     if not user:
+        handle_login_attempt(username, False)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
-    # 验证密码
     if not verify_password(password, user['password_hash']):
+        handle_login_attempt(username, False)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
-    # 创建会话
+    allowed, msg = handle_login_attempt(username, True)
+    if not allowed:
+        return jsonify({'code': 403, 'message': msg}), 403
+
     session['user_id'] = user['id']
     session['user'] = {
         'id': user['id'],

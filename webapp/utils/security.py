@@ -72,7 +72,11 @@ def validate_password(password):
     """
     验证密码强度
 
-    规则：至少6个字符
+    规则：
+    - 长度：至少8个字符
+    - 必须包含数字
+    - 必须包含字母（大小写）
+    - 可选包含特殊字符
 
     参数:
         password: 密码
@@ -80,8 +84,26 @@ def validate_password(password):
     返回:
         tuple: (是否有效, 错误消息)
     """
-    if not password or len(password) < 6:
-        return False, "密码长度需至少6个字符"
+    if not password:
+        return False, "密码不能为空"
+    
+    if len(password) < 8:
+        return False, "密码长度至少8个字符"
+    
+    if len(password) > 100:
+        return False, "密码长度不能超过100个字符"
+    
+    has_digit = any(c.isdigit() for c in password)
+    has_lower = any(c.islower() for c in password)
+    has_upper = any(c.isupper() for c in password)
+    
+    if not has_digit:
+        return False, "密码必须包含数字"
+    if not has_lower:
+        return False, "密码必须包含小写字母"
+    if not has_upper:
+        return False, "密码必须包含大写字母"
+    
     return True, None
 
 
