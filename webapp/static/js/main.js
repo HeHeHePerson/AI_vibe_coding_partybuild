@@ -341,7 +341,11 @@ const auth = {
 
     // 登出
     logout: async function() {
-        await utils.api('/api/auth/logout', { method: 'POST' });
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+        await utils.api('/api/auth/logout', { 
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken }
+        });
         currentUser = null;
         this.updateUI();
         utils.showToast('已退出登录', 'info');
