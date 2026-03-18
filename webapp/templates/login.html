@@ -6,13 +6,14 @@
 <div class="form-container">
     <h1>用户登录</h1>
     <form id="loginForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label for="username">用户名</label>
             <input type="text" id="username" name="username" required placeholder="请输入用户名">
         </div>
         <div class="form-group">
             <label for="password">密码</label>
-            <input type="password" id="password" name="password" required placeholder="请输入密码">
+            <input type="password" id="password" name="password" required placeholder="请输入密码（至少8位，含数字和大小写）">
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">登录</button>

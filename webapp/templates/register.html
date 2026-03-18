@@ -6,13 +6,14 @@
 <div class="form-container">
     <h1>用户注册</h1>
     <form id="registerForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="form-group">
             <label for="username">用户名</label>
             <input type="text" id="username" name="username" required placeholder="请输入用户名（2-50个字符）">
         </div>
         <div class="form-group">
             <label for="password">密码</label>
-            <input type="password" id="password" name="password" required placeholder="请输入密码（至少6个字符）">
+            <input type="password" id="password" name="password" required placeholder="请输入密码（至少8位，含数字和大小写）">
         </div>
         <div class="form-group">
             <label for="confirmPassword">确认密码</label>
@@ -41,8 +42,13 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
         return;
     }
 
-    if (password.length < 6) {
-        utils.showToast('密码长度至少6个字符', 'error');
+    if (password.length < 8) {
+        utils.showToast('密码长度至少8位', 'error');
+        return;
+    }
+
+    if (!/\d/.test(password) || !/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+        utils.showToast('密码必须包含数字和大小写字母', 'error');
         return;
     }
 

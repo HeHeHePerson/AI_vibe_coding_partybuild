@@ -293,9 +293,13 @@ const auth = {
 
     // 登录
     login: async function(username, password) {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api('/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
             body: JSON.stringify({ username, password })
         });
 
@@ -313,9 +317,13 @@ const auth = {
 
     // 注册
     register: async function(username, password) {
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api('/api/auth/register', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            },
             body: JSON.stringify({ username, password })
         });
 
