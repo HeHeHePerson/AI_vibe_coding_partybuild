@@ -747,13 +747,17 @@ const contents = {
             return;
         }
 
+        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         let result;
         if (alreadyLiked) {
-            result = await utils.api(`/api/contents/${contentId}/like`, { method: 'DELETE' });
+            result = await utils.api(`/api/contents/${contentId}/like`, { 
+                method: 'DELETE',
+                headers: { 'X-CSRF-Token': csrfToken }
+            });
         } else {
             result = await utils.api(`/api/contents/${contentId}/like`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken }
             });
         }
 
