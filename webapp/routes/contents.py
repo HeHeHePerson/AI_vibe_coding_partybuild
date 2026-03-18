@@ -151,11 +151,15 @@ def get_content(content_id):
 
             # 获取评论
             cursor.execute("""
-                SELECT cm.id, cm.content_id, cm.user_id, cm.body,
+                SELECT cm.id, cm.content_id, cm.user_id, cm.body, cm.parent_id,
                        cm.created_at as created_at,
-                       u.username as user_name
+                       u.username as user_name,
+                       p.user_id as parent_user_id, pu.username as parent_user_name,
+                       p.body as parent_body
                 FROM comments cm
                 JOIN users u ON cm.user_id = u.id
+                LEFT JOIN comments p ON cm.parent_id = p.id
+                LEFT JOIN users pu ON p.user_id = pu.id
                 WHERE cm.content_id = %s
                 ORDER BY cm.created_at DESC
             """, (content_id,))
