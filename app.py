@@ -4,7 +4,7 @@
 import os
 import logging
 from datetime import datetime
-from flask import Flask, render_template, session, redirect, url_for, request, g
+from flask import Flask, render_template, session, redirect, url_for, request, g, current_app
 from config import (
     SECRET_KEY, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME,
     UPLOAD_FOLDER, ALLOWED_EXTENSIONS, MAX_CONTENT_LENGTH
