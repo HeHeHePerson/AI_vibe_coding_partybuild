@@ -232,6 +232,14 @@ def profile_page():
     return render_template('profile.html', current_user=current_user_with_avatar)
 
 
+@app.route('/uploads/<path:filename>')
+def serve_upload(filename):
+    """提供上传文件的访问服务"""
+    from flask import send_from_directory
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    return send_from_directory(upload_folder, filename)
+
+
 # 错误处理
 @app.errorhandler(404)
 def not_found(e):
