@@ -409,10 +409,12 @@ const contents = {
 
     // 渲染头像
     renderAvatar: function(avatarUrl, username) {
-        if (avatarUrl) {
-            return `<img src="${utils.escapeHtml(avatarUrl)}" alt="${utils.escapeHtml(username)}" class="user-avatar" onerror="this.outerHTML='${this.getAvatarPlaceholder(username).replace(/'/g, "\\'")}'">`;
+        if (!avatarUrl) {
+            return this.getAvatarPlaceholder(username);
         }
-        return this.getAvatarPlaceholder(username);
+        const safeName = utils.escapeHtml(username);
+        const safeUrl = encodeURI(avatarUrl);
+        return `<img src="${safeUrl}" alt="${safeName}" class="user-avatar" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"><span class="avatar-placeholder" style="display:none;">${safeName.charAt(0).toUpperCase()}</span>`;
     },
 
     // 渲染内容详情
