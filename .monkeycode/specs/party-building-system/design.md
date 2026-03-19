@@ -46,7 +46,12 @@ graph TB
 | username | VARCHAR(50) UNIQUE NOT NULL | 用户名 |
 | password_hash | VARCHAR(255) NOT NULL | 加密后的密码 |
 | role | ENUM('admin', 'user') NOT NULL DEFAULT 'user' | 角色 |
+| avatar | VARCHAR(500) | 头像URL路径 |
+| bio | TEXT | 个人简介 |
+| email | VARCHAR(100) | 邮箱 |
+| phone | VARCHAR(20) | 手机号 |
 | created_at | DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+| last_login_at | DATETIME | 最后登录时间 |
 
 #### 4.1.2 内容表 (contents)
 
@@ -104,6 +109,10 @@ graph TB
 | GET | /api/users | 获取用户列表 | 是 | 管理员 |
 | POST | /api/users | 创建用户 | 是 | 管理员 |
 | DELETE | /api/users/:id | 删除用户 | 是 | 管理员 |
+| GET | /api/profile | 获取当前用户资料（含头像） | 是 | - |
+| PUT | /api/profile | 更新用户资料 | 是 | - |
+| POST | /api/profile/avatar | 上传头像 | 是 | - |
+| PUT | /api/profile/password | 修改密码 | 是 | - |
 
 ### 5.3 内容接口
 
@@ -207,6 +216,14 @@ graph TB
 - 设置Session过期时间
 - 使用安全的Cookie配置
 
+### 7.6 文件上传安全
+- 仅允许白名单中的图片格式（PNG、JPG、JPEG、GIF、WEBP）
+- 通过文件扩展名、MIME类型和魔术数字（Magic Number）三重验证
+- 文件大小限制：最大 2MB
+- 图片尺寸限制：最大 1024x1024 像素
+- 使用随机文件名防止冲突和路径猜测
+- 上传目录与应用代码隔离
+
 ## 8. 前端页面结构
 
 ```
@@ -236,6 +253,7 @@ party-building-system/
 │   ├── auth.py            # 认证路由
 │   ├── users.py           # 用户管理路由
 │   ├── contents.py        # 内容路由
+│   ├── profile.py         # 用户资料路由（含头像上传）
 │   └── stats.py           # 统计路由
 ├── static/                # 静态文件
 │   ├── css/

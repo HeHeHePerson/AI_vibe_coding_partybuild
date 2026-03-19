@@ -783,3 +783,53 @@ body {
         margin: 20px;
     }
 }
+
+/* 用户头像样式 */
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.avatar-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #ddd;
+    color: #666;
+    font-size: 18px;
+    font-weight: bold;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+
+.author-info {
+    display: inline-flex;
+    align-items: center;
+}
+
+.comment-author {
+    display: inline-flex;
+    align-items: center;
+}
+
+.meta .user-avatar,
+.meta .avatar-placeholder {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+}
+
+.comment-header .user-avatar,
+.comment-header .avatar-placeholder {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    margin-right: 6px;
+}

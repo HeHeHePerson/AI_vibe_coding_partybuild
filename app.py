@@ -9,7 +9,7 @@ from config import (
     SECRET_KEY, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME,
     UPLOAD_FOLDER, ALLOWED_EXTENSIONS, MAX_CONTENT_LENGTH
 )
-from database import init_db
+from database import init_db, get_db
 from webapp.utils.stats import record_visit
 from webapp.utils.csrf import generate_csrf_token, validate_csrf_token, get_csrf_token_from_request
 
@@ -205,7 +205,31 @@ def profile_page():
     user = session.get('user')
     if not user:
         return redirect(url_for('login_page'))
-    return render_template('profile.html', current_user=user)
+    user_id = session.get('user_id')
+    if not user_id:
+        return redirect(url_for('login_page'))
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """SELECT id, username, role, avatar, bio, email, phone, created_at, last_login_at
+                   FROM users WHERE id = %s""",
+                (user_id,)
+            )
+            db_user = cursor.fetchone()
+            if not db_user:
+                return redirect(url_for('login_page'))
+            current_user_with_avatar = {
+                'id': db_user['id'],
+                'username': db_user['username'],
+                'role': db_user['role'],
+                'avatar': db_user['avatar'],
+                'bio': db_user['bio'],
+                'email': db_user['email'],
+                'phone': db_user['phone'],
+                'created_at': db_user['created_at'],
+                'last_login_at': db_user['last_login_at']
+            }
+    return render_template('profile.html', current_user=current_user_with_avatar)
 
 
 # 错误处理

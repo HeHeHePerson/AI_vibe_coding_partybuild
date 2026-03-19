@@ -217,6 +217,10 @@ async function loadProfile() {
         document.getElementById('email').value = result.data.email || '';
         document.getElementById('phone').value = result.data.phone || '';
         document.getElementById('bio').value = result.data.bio || '';
+        if (result.data.avatar) {
+            document.getElementById('avatarPreview').innerHTML = 
+                '<img src="' + result.data.avatar + '" alt="头像">';
+        }
     }
 }
 </script>

@@ -9,6 +9,7 @@
 """
 import os
 import time
+import struct
 from flask import Blueprint, request, jsonify, session, current_app
 from werkzeug.utils import secure_filename
 from database import get_db
@@ -18,12 +19,95 @@ from webapp.utils.operation_log import log_operation
 profile_bp = Blueprint('profile', __name__)
 
 ALLOWED_AVATAR_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_AVATAR_MIME_TYPES = {
+    'png': ['image/png'],
+    'jpg': ['image/jpeg', 'image/jpg'],
+    'jpeg': ['image/jpeg'],
+    'gif': ['image/gif'],
+    'webp': ['image/webp']
+}
+MAGIC_NUMBERS = {
+    'png': b'\x89PNG\r\n\x1a\n',
+    'jpg': b'\xff\xd8\xff',
+    'jpeg': b'\xff\xd8\xff',
+    'gif': b'GIF87a',
+    'gif89a': b'GIF89a',
+    'webp': b'RIFF'
+}
+MAX_AVATAR_SIZE = 2 * 1024 * 1024
+MAX_AVATAR_DIMENSION = 1024
+
+
+def get_file_extension(filename):
+    """安全获取文件扩展名"""
+    if '.' not in filename:
+        return None
+    return filename.rsplit('.', 1)[1].lower()
 
 
 def allowed_avatar_file(filename):
-    """检查是否为允许的头像文件类型"""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_AVATAR_EXTENSIONS
+    """检查是否为允许的头像文件类型（仅检查扩展名）"""
+    ext = get_file_extension(filename)
+    return ext in ALLOWED_AVATAR_EXTENSIONS if ext else False
+
+
+def verify_image_magic_number(file_stream):
+    """通过读取文件头部魔术数字验证图片真实格式"""
+    file_stream.seek(0)
+    header = file_stream.read(16)
+    file_stream.seek(0)
+
+    if header.startswith(MAGIC_NUMBERS['png']):
+        return 'png'
+    elif header.startswith(MAGIC_NUMBERS['jpg']) or header.startswith(MAGIC_NUMBERS['jpeg']):
+        return 'jpg'
+    elif header.startswith(MAGIC_NUMBERS['gif87a']) or header.startswith(MAGIC_NUMBERS['gif89a']):
+        return 'gif'
+    elif header.startswith(MAGIC_NUMBERS['webp']):
+        file_stream.seek(0)
+        riff = file_stream.read(12)
+        if len(riff) >= 12 and riff[8:12] == b'WEBP':
+            return 'webp'
+    return None
+
+
+def verify_image_dimensions(filepath, max_dimension):
+    """验证图片尺寸不超过限制"""
+    try:
+        with open(filepath, 'rb') as f:
+            header = f.read(16)
+            f.seek(0)
+
+            width, height = 0, 0
+
+            if header.startswith(MAGIC_NUMBERS['png']):
+                f.seek(16)
+                width = struct.unpack('>I', f.read(4))[0]
+                height = struct.unpack('>I', f.read(4))[0]
+            elif header.startswith(MAGIC_NUMBERS['jpg']) or header.startswith(MAGIC_NUMBERS['jpeg']):
+                f.seek(0)
+                while True:
+                    marker = f.read(2)
+                    if marker != b'\xff':
+                        break
+                    length = struct.unpack('>H', f.read(2))[0]
+                    if marker in (b'\xc0', b'\xc2'):
+                        f.read(1)
+                        height = struct.unpack('>H', f.read(2))[0]
+                        width = struct.unpack('>H', f.read(2))[0]
+                        break
+                    f.seek(length - 2, 1)
+            elif header.startswith(MAGIC_NUMBERS['gif87a']) or header.startswith(MAGIC_NUMBERS['gif89a']):
+                width = struct.unpack('<H', f.read(2))[0]
+                height = struct.unpack('<H', f.read(2))[0]
+            else:
+                return True
+
+            if width > max_dimension or height > max_dimension:
+                return False
+            return True
+    except Exception:
+        return False
 
 
 @profile_bp.route('/api/profile', methods=['GET'])
@@ -87,7 +171,15 @@ def update_profile():
 
 @profile_bp.route('/api/profile/avatar', methods=['POST'])
 def upload_avatar():
-    """上传用户头像"""
+    """上传用户头像
+
+    安全检查：
+    - 文件扩展名验证
+    - MIME 类型验证
+    - Magic Number (文件头) 验证
+    - 文件大小限制 (2MB)
+    - 图片尺寸限制 (1024x1024)
+    """
     user_id = session.get('user_id')
     if not user_id:
         return jsonify({'code': 401, 'message': '请先登录'}), 401
@@ -99,35 +191,64 @@ def upload_avatar():
     if file.filename == '':
         return jsonify({'code': 400, 'message': '请选择头像文件'}), 400
 
-    if not allowed_avatar_file(file.filename):
+    ext = get_file_extension(file.filename)
+    if not ext or ext not in ALLOWED_AVATAR_EXTENSIONS:
         return jsonify({'code': 400, 'message': '不支持的图片格式，请上传 png、jpg、jpeg、gif 或 webp 格式'}), 400
 
-    filename = secure_filename(file.filename)
+    content = file.read()
+    file.seek(0)
+
+    if len(content) > MAX_AVATAR_SIZE:
+        return jsonify({'code': 400, 'message': '图片文件大小不能超过 2MB'}), 400
+
+    if len(content) < 16:
+        return jsonify({'code': 400, 'message': '文件损坏或不是有效的图片文件'}), 400
+
+    import io
+    file_stream = io.BytesIO(content)
+    magic_ext = verify_image_magic_number(file_stream)
+    if not magic_ext or magic_ext != ext:
+        return jsonify({'code': 400, 'message': '文件类型与扩展名不匹配或文件已损坏'}), 400
+
+    mime_type = file.content_type if file.content_type else ''
+    allowed_mimes = ALLOWED_AVATAR_MIME_TYPES.get(ext, [])
+    if mime_type and mime_type not in allowed_mimes:
+        return jsonify({'code': 400, 'message': '不支持的图片 MIME 类型'}), 400
+
     timestamp = int(time.time())
-    filename = f"avatar_{user_id}_{timestamp}.{filename.rsplit('.', 1)[1].lower()}"
-    
+    filename = f"avatar_{user_id}_{timestamp}.{ext}"
+
     avatar_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'avatars')
     os.makedirs(avatar_folder, exist_ok=True)
     filepath = os.path.join(avatar_folder, filename)
 
-    file.save(filepath)
+    try:
+        file.save(filepath)
 
-    avatar_url = f'/uploads/avatars/{filename}'
+        if not verify_image_dimensions(filepath, MAX_AVATAR_DIMENSION):
+            os.remove(filepath)
+            return jsonify({'code': 400, 'message': f'图片尺寸不能超过 {MAX_AVATAR_DIMENSION}x{MAX_AVATAR_DIMENSION} 像素'}), 400
 
-    with get_db() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "UPDATE users SET avatar = %s WHERE id = %s",
-                (avatar_url, user_id)
-            )
+        avatar_url = f'/uploads/avatars/{filename}'
 
-    log_operation('upload_avatar', {'filename': filename})
+        with get_db() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET avatar = %s WHERE id = %s",
+                    (avatar_url, user_id)
+                )
 
-    return jsonify({
-        'code': 200,
-        'message': '头像上传成功',
-        'data': {'avatar': avatar_url}
-    })
+        log_operation('upload_avatar', {'filename': filename})
+
+        return jsonify({
+            'code': 200,
+            'message': '头像上传成功',
+            'data': {'avatar': avatar_url}
+        })
+    except Exception as e:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({'code': 500, 'message': '头像上传失败'}), 500
 
 
 @profile_bp.route('/api/profile/password', methods=['PUT'])

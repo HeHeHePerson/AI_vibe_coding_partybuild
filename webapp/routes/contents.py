@@ -132,7 +132,8 @@ def get_content(content_id):
                 SELECT c.id, c.title, c.body, c.images,
                        c.created_at as created_at,
                        c.author_id as author_id,
-                       u.username as author_name
+                       u.username as author_name,
+                       u.avatar as author_avatar
                 FROM contents c
                 JOIN users u ON c.author_id = u.id
                 WHERE c.id = %s
@@ -154,7 +155,9 @@ def get_content(content_id):
                 SELECT cm.id, cm.content_id, cm.user_id, cm.body, cm.parent_id,
                        cm.created_at as created_at,
                        u.username as user_name,
+                       u.avatar as user_avatar,
                        p.user_id as parent_user_id, pu.username as parent_user_name,
+                       pu.avatar as parent_user_avatar,
                        p.body as parent_body
                 FROM comments cm
                 JOIN users u ON cm.user_id = u.id

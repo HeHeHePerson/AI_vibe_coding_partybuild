@@ -401,6 +401,20 @@ const contents = {
         }
     },
 
+    // 获取默认头像占位符
+    getAvatarPlaceholder: function(username) {
+        const initial = username ? username.charAt(0).toUpperCase() : 'U';
+        return `<span class="avatar-placeholder">${initial}</span>`;
+    },
+
+    // 渲染头像
+    renderAvatar: function(avatarUrl, username) {
+        if (avatarUrl) {
+            return `<img src="${utils.escapeHtml(avatarUrl)}" alt="${utils.escapeHtml(username)}" class="user-avatar" onerror="this.outerHTML='${this.getAvatarPlaceholder(username).replace(/'/g, "\\'")}'">`;
+        }
+        return this.getAvatarPlaceholder(username);
+    },
+
     // 渲染内容详情
     renderDetail: function(data) {
         const { content, comments, like_count, user_liked } = data;
@@ -445,7 +459,10 @@ const contents = {
             contentContainer.innerHTML = `
                 <h1>${utils.escapeHtml(content.title)}</h1>
                 <div class="meta">
-                    <span>作者: ${utils.escapeHtml(content.author_name)}</span>
+                    <span class="author-info">
+                        ${this.renderAvatar(content.author_avatar, content.author_name)}
+                        <span>${utils.escapeHtml(content.author_name)}</span>
+                    </span>
                     <span>发布时间: ${utils.formatDate(content.created_at)}</span>
                 </div>
                 <div class="body">${utils.escapeHtml(content.body).replace(/\n/g, '<br>')}</div>
@@ -520,7 +537,10 @@ const contents = {
                 return `
                     <div class="comment-item ${isReply ? 'comment-reply' : ''}" data-id="${comment.id}" data-parent-id="${comment.parent_id || ''}">
                         <div class="comment-header">
-                            <span class="comment-author">${utils.escapeHtml(comment.user_name)}</span>
+                            <span class="comment-author">
+                                ${this.renderAvatar(comment.user_avatar, comment.user_name)}
+                                ${utils.escapeHtml(comment.user_name)}
+                            </span>
                             <span class="comment-time">${utils.formatDate(comment.created_at)}</span>
                         </div>
                         ${replyToHtml}
