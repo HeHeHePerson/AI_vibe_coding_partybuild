@@ -10,6 +10,7 @@
 - 生成算术验证码
 """
 import random
+import time
 from flask import Blueprint, request, jsonify, session
 from webapp.utils.auth import (
     create_user, get_user_by_username, get_user_by_id,
@@ -17,7 +18,8 @@ from webapp.utils.auth import (
 )
 from webapp.utils.security import validate_username, validate_password
 from webapp.utils.stats import record_visit
-from webapp.utils.login_security import handle_login_attempt, is_account_locked
+from webapp.utils.login_security import handle_login_attempt, is_account_locked, get_client_ip
+from webapp.utils.operation_log import log_operation
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -100,10 +102,12 @@ def login():
     user = get_user_by_username(username)
     if not user:
         handle_login_attempt(username, False)
+        log_operation('login_failed', {'username': username, 'reason': 'user_not_found'}, None, username)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
     if not verify_password(password, user['password_hash']):
         handle_login_attempt(username, False)
+        log_operation('login_failed', {'username': username, 'reason': 'wrong_password'}, None, username)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
     allowed, msg = handle_login_attempt(username, True)
@@ -116,6 +120,11 @@ def login():
         'username': user['username'],
         'role': user['role']
     }
+    session['last_activity'] = int(time.time())
+
+    from webapp.utils.operation_log import log_operation
+    from webapp.utils.login_security import get_client_ip
+    log_operation('login_success', {'username': username}, user['id'], user['username'])
 
     return jsonify({
         'code': 200,
@@ -131,6 +140,9 @@ def login():
 @auth_bp.route('/api/auth/logout', methods=['POST'])
 def logout():
     """用户登出"""
+    user_id = session.get('user_id')
+    username = session.get('user', {}).get('username', 'unknown')
+    log_operation('logout', {'username': username}, user_id, username)
     session.clear()
     return jsonify({'code': 200, 'message': '登出成功'})
 

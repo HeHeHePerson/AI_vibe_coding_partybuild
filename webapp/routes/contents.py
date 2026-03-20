@@ -7,6 +7,7 @@
 - 评论管理
 - 内容点赞和评论点赞
 - 文件上传（带安全检查）
+- 用户审计日志记录（发布内容、发布评论）
 """
 import json
 import os
@@ -16,6 +17,7 @@ from werkzeug.utils import secure_filename
 from database import get_db
 from webapp.utils.security import escape_html, validate_title, validate_content
 from webapp.utils.operation_log import log_operation
+from webapp.utils.login_security import get_client_ip
 
 contents_bp = Blueprint('contents', __name__)
 
@@ -275,7 +277,7 @@ def create_content():
                     except (ValueError, TypeError):
                         pass
 
-    log_operation('create_content', {'content_id': content_id, 'title': title})
+    log_operation('create_content', {'content_id': content_id, 'title': title, 'ip': get_client_ip()}, user_id, session.get('user', {}).get('username'))
 
     return jsonify({'code': 200, 'message': '创建成功', 'data': {'id': content_id}})
 
@@ -376,6 +378,8 @@ def add_comment(content_id):
                 (content_id, user_id, body, parent_id)
             )
             comment_id = cursor.lastrowid
+
+    log_operation('create_comment', {'comment_id': comment_id, 'content_id': content_id, 'parent_id': parent_id, 'ip': get_client_ip()}, user_id, session.get('user', {}).get('username'))
 
     return jsonify({'code': 200, 'message': '评论成功', 'data': {'id': comment_id}})
 

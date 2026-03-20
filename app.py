@@ -1,7 +1,14 @@
 """
 智慧党建系统 - Flask应用主入口
+
+功能：
+- 用户认证与会话管理（3小时无操作超时）
+- 页面路由
+- 请求日志记录
+- 蓝图注册
 """
 import os
+import time
 import logging
 from datetime import datetime
 from flask import Flask, render_template, session, redirect, url_for, request, g, current_app
@@ -12,6 +19,8 @@ from config import (
 from database import init_db, get_db
 from webapp.utils.stats import record_visit
 from webapp.utils.csrf import generate_csrf_token, validate_csrf_token, get_csrf_token_from_request
+
+SESSION_TIMEOUT = 3 * 60 * 60  # 3小时（秒）
 
 # 创建Flask应用
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,6 +63,7 @@ from webapp.routes.stats import stats_bp
 from webapp.routes.notices import notices_bp
 from webapp.routes.profile import profile_bp
 from webapp.routes.categories import categories_bp
+from webapp.routes.audit import audit_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
@@ -62,9 +72,22 @@ app.register_blueprint(stats_bp)
 app.register_blueprint(notices_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(categories_bp)
+app.register_blueprint(audit_bp)
 
 
 # 请求日志记录中间件
+@app.before_request
+def check_session_timeout():
+    """检查session超时，3小时无操作则清除session"""
+    if session.get('user_id'):
+        last_activity = session.get('last_activity')
+        if last_activity:
+            if time.time() - last_activity > SESSION_TIMEOUT:
+                session.clear()
+                return redirect(url_for('login_page'))
+        session['last_activity'] = time.time()
+
+
 @app.before_request
 def log_request_info():
     """记录请求开始时间"""
@@ -196,6 +219,18 @@ def notices_page():
     if user.get('role') != 'admin':
         return redirect(url_for('index'))
     return render_template('notices.html')
+
+
+# 路由：用户审计日志页面（管理员）
+@app.route('/audit')
+def audit_page():
+    """用户审计日志页面"""
+    user = session.get('user')
+    if not user:
+        return redirect(url_for('login_page'))
+    if user.get('role') != 'admin':
+        return redirect(url_for('index'))
+    return render_template('audit.html')
 
 
 # 路由：个人资料页面

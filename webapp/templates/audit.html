@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}用户审计 - 智慧党建系统{% endblock %}
+
+{% block content %}
+<div class="manage-header">
+    <h1>用户审计日志</h1>
+</div>
+
+<div class="audit-filters">
+    <form id="auditFilterForm" class="filter-form">
+        <div class="filter-row">
+            <div class="filter-item">
+                <label>操作类型</label>
+                <select id="operationFilter">
+                    <option value="">全部</option>
+                    <option value="login_success">登录成功</option>
+                    <option value="login_failed">登录失败</option>
+                    <option value="logout">登出</option>
+                    <option value="create_content">发布内容</option>
+                    <option value="create_comment">发布评论</option>
+                    <option value="update_profile">更新资料</option>
+                    <option value="upload_avatar">上传头像</option>
+                    <option value="change_password">修改密码</option>
+                    <option value="delete_content">删除内容</option>
+                    <option value="delete_comment">删除评论</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>用户名</label>
+                <input type="text" id="usernameFilter" placeholder="输入用户名">
+            </div>
+            <div class="filter-item">
+                <label>开始日期</label>
+                <input type="date" id="startDateFilter">
+            </div>
+            <div class="filter-item">
+                <label>结束日期</label>
+                <input type="date" id="endDateFilter">
+            </div>
+            <div class="filter-item">
+                <label>&nbsp;</label>
+                <button type="button" class="btn btn-primary" onclick="loadAuditLogs(1)">查询</button>
+                <button type="button" class="btn" onclick="resetFilters()">重置</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="audit-table">
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>时间</th>
+                <th>用户名</th>
+                <th>操作类型</th>
+                <th>详情</th>
+                <th>IP地址</th>
+            </tr>
+        </thead>
+        <tbody id="auditTableBody">
+            <tr>
+                <td colspan="6" style="text-align:center;">加载中...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination" id="auditPagination"></div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.audit-filters {
+    background: var(--white);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+}
+.filter-form {
+    margin: 0;
+}
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+}
+.filter-item {
+    flex: 1;
+    min-width: 150px;
+}
+.filter-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+    color: var(--text-light);
+}
+.filter-item select,
+.filter-item input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+.audit-table {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+.audit-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.audit-table th,
+.audit-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+.audit-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: var(--text);
+}
+.audit-table tr:last-child td {
+    border-bottom: none;
+}
+.audit-table tr:hover {
+    background: #f8f9fa;
+}
+.operation-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #e8f4ff;
+    color: #1890ff;
+}
+.operation-tag.login_success { background: #f6ffed; color: #52c41a; }
+.operation-tag.login_failed { background: #fff1f0; color: #ff4d4f; }
+.operation-tag.logout { background: #f9f0ff; color: #722ed1; }
+.operation-tag.create_content { background: #e6f7ff; color: #1890ff; }
+.operation-tag.create_comment { background: #fff7e6; color: #fa8c16; }
+.operation-tag.delete_content { background: #fff1f0; color: #ff4d4f; }
+.operation-tag.delete_comment { background: #fff1f0; color: #ff4d4f; }
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    margin-top: 20px;
+}
+.pagination button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: var(--white);
+    border-radius: 4px;
+    cursor: pointer;
+}
+.pagination button.active {
+    background: var(--primary-red);
+    color: white;
+    border-color: var(--primary-red);
+}
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+<script>
+let currentPage = 1;
+
+function getOperationLabel(op) {
+    const labels = {
+        'login_success': '登录成功',
+        'login_failed': '登录失败',
+        'logout': '登出',
+        'create_content': '发布内容',
+        'create_comment': '发布评论',
+        'update_profile': '更新资料',
+        'upload_avatar': '上传头像',
+        'change_password': '修改密码',
+        'delete_content': '删除内容',
+        'delete_comment': '删除评论'
+    };
+    return labels[op] || op;
+}
+
+async function loadAuditLogs(page) {
+    currentPage = page;
+    const operation = document.getElementById('operationFilter').value;
+    const username = document.getElementById('usernameFilter').value.trim();
+    const startDate = document.getElementById('startDateFilter').value;
+    const endDate = document.getElementById('endDateFilter').value;
+
+    let url = `/api/audit/logs?page=${page}&per_page=50`;
+    if (operation) url += `&operation=${encodeURIComponent(operation)}`;
+    if (username) url += `&username=${encodeURIComponent(username)}`;
+    if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
+    if (endDate) url += `&end_date=${encodeURIComponent(endDate)}`;
+
+    const result = await utils.api(url);
+    if (result.code === 200) {
+        renderAuditLogs(result.data.logs);
+        renderPagination(result.data.pagination);
+    } else if (result.code === 401 || result.code === 403) {
+        window.location.href = '/login';
+    } else {
+        utils.showToast(result.message || '获取审计日志失败', 'error');
+    }
+}
+
+function renderAuditLogs(logs) {
+    const tbody = document.getElementById('auditTableBody');
+    if (!tbody) return;
+
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">暂无数据</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = logs.map(log => `
+        <tr>
+            <td>${log.id}</td>
+            <td>${utils.formatDate(log.created_at)}</td>
+            <td>${utils.escapeHtml(log.username || '-')}</td>
+            <td><span class="operation-tag ${log.operation}">${getOperationLabel(log.operation)}</span></td>
+            <td>${formatDetail(log.detail)}</td>
+            <td>${utils.escapeHtml(log.ip_address || '-')}</td>
+        </tr>
+    `).join('');
+}
+
+function formatDetail(detail) {
+    if (!detail) return '-';
+    try {
+        const obj = typeof detail === 'string' ? JSON.parse(detail) : detail;
+        const parts = [];
+        if (obj.reason) parts.push(obj.reason);
+        if (obj.content_id) parts.push(`内容ID: ${obj.content_id}`);
+        if (obj.comment_id) parts.push(`评论ID: ${obj.comment_id}`);
+        if (obj.title) parts.push(`标题: ${obj.title.substring(0, 20)}${obj.title.length > 20 ? '...' : ''}`);
+        if (obj.ip) parts.push(`IP: ${obj.ip}`);
+        return parts.length > 0 ? parts.join(', ') : '-';
+    } catch {
+        return detail;
+    }
+}
+
+function renderPagination(pagination) {
+    const container = document.getElementById('auditPagination');
+    if (!container) return;
+
+    if (pagination.pages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    html += `<button ${pagination.page <= 1 ? 'disabled' : ''} onclick="loadAuditLogs(${pagination.page - 1})">上一页</button>`;
+    
+    for (let i = 1; i <= pagination.pages; i++) {
+        if (i === 1 || i === pagination.pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
+            html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="loadAuditLogs(${i})">${i}</button>`;
+        } else if (i === pagination.page - 3 || i === pagination.page + 3) {
+            html += `<span style="padding: 0 5px;">...</span>`;
+        }
+    }
+    
+    html += `<button ${pagination.page >= pagination.pages ? 'disabled' : ''} onclick="loadAuditLogs(${pagination.page + 1})">下一页</button>`;
+    
+    container.innerHTML = html;
+}
+
+function resetFilters() {
+    document.getElementById('operationFilter').value = '';
+    document.getElementById('usernameFilter').value = '';
+    document.getElementById('startDateFilter').value = '';
+    document.getElementById('endDateFilter').value = '';
+    loadAuditLogs(1);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    auth.checkAuth().then(function() {
+        if (!currentUser || currentUser.role !== 'admin') {
+            window.location.href = '/';
+            return;
+        }
+        loadAuditLogs(1);
+    });
+});
+</script>
+{% endblock %}

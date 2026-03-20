@@ -51,11 +51,15 @@ party-building/
 │   │   ├── users.py          # 用户管理路由
 │   │   ├── contents.py       # 内容管理路由
 │   │   ├── stats.py          # 统计路由
-│   │   └── notices.py        # 公告路由
+│   │   ├── notices.py        # 公告路由
+│   │   ├── profile.py        # 用户资料路由
+│   │   ├── audit.py          # 审计日志路由
+│   │   └── categories.py     # 分类路由
 │   ├── utils/                # 工具模块
 │   │   ├── auth.py           # 认证工具
 │   │   ├── security.py        # 安全工具
-│   │   └── stats.py          # 统计工具
+│   │   ├── stats.py          # 统计工具
+│   │   └── operation_log.py  # 操作日志工具
 │   ├── templates/            # HTML模板
 │   │   ├── base.html         # 基础模板
 │   │   ├── index.html        # 首页
@@ -63,8 +67,10 @@ party-building/
 │   │   ├── register.html     # 注册页
 │   │   ├── create.html       # 发布内容页
 │   │   ├── content.html      # 内容详情页
+│   │   ├── profile.html      # 个人资料页
 │   │   ├── manage.html       # 用户管理页
 │   │   ├── notices.html      # 公告管理页
+│   │   ├── audit.html        # 审计日志页
 │   │   └── error.html        # 错误页
 │   ├── static/               # 静态资源
 │   │   ├── css/
@@ -75,7 +81,8 @@ party-building/
 └── docs/                     # 项目文档
     ├── requirements.md      # 需求文档
     ├── design.md             # 本文档
-    └── deployment.md         # 部署文档
+    ├── deployment.md         # 部署文档
+    └── migration_*.sql       # 数据库迁移脚本
 ```
 
 ---
@@ -206,6 +213,13 @@ party-building/
 | /api/notices | GET | 获取公告列表 |
 | /api/notices | POST | 发布公告（管理员） |
 | /api/notices/:id | DELETE | 删除公告（管理员） |
+
+#### 3.1.6 审计模块 (audit.py)
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| /api/audit/logs | GET | 获取审计日志列表（管理员） |
+| /api/audit/operations | GET | 获取操作类型列表（管理员） |
 
 ### 3.2 工具层
 
