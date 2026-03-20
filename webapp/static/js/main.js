@@ -292,7 +292,7 @@ const auth = {
     },
 
     // 登录
-    login: async function(username, password) {
+    login: async function(username, password, captcha) {
         const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
         const result = await utils.api('/api/auth/login', {
             method: 'POST',
@@ -300,7 +300,7 @@ const auth = {
                 'Content-Type': 'application/json',
                 'X-CSRF-Token': csrfToken
             },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, captcha })
         });
 
         if (result.code === 200) {
@@ -312,6 +312,9 @@ const auth = {
             }, 500);
         } else {
             utils.showToast(result.message || '登录失败', 'error');
+            if (result.message.includes('验证码') || result.message.includes('过期')) {
+                refreshCaptcha();
+            }
         }
     },
 

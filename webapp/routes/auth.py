@@ -1,6 +1,7 @@
 """
 认证路由模块
 """
+import random
 from flask import Blueprint, request, jsonify, session
 from webapp.utils.auth import (
     create_user, get_user_by_username, get_user_by_id,
@@ -13,12 +14,46 @@ from webapp.utils.login_security import handle_login_attempt, is_account_locked
 auth_bp = Blueprint('auth', __name__)
 
 
+def generate_captcha():
+    """生成算术验证码"""
+    operators = ['+', '-', '*']
+    op = random.choice(operators)
+    
+    if op == '+':
+        a = random.randint(1, 20)
+        b = random.randint(1, 20)
+        answer = a + b
+        expression = f"{a} + {b} = ?"
+    elif op == '-':
+        a = random.randint(10, 30)
+        b = random.randint(1, a)
+        answer = a - b
+        expression = f"{a} - {b} = ?"
+    else:
+        a = random.randint(2, 9)
+        b = random.randint(2, 9)
+        answer = a * b
+        expression = f"{a} × {b} = ?"
+    
+    return expression, str(answer)
+
+
+@auth_bp.route('/api/auth/captcha', methods=['GET'])
+def get_captcha():
+    """获取算术验证码"""
+    expression, answer = generate_captcha()
+    session['captcha_answer'] = answer
+    session['captcha_ts'] = int(__import__('time').time())
+    return jsonify({'code': 200, 'data': {'expression': expression}})
+
+
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
     """用户登录"""
     data = request.json if request.json else {}
     username = data.get('username', '').strip()
     password = data.get('password', '')
+    captcha = data.get('captcha', '').strip()
 
     if not username or not password:
         return jsonify({'code': 400, 'message': '用户名和密码不能为空'}), 400
@@ -26,6 +61,24 @@ def login():
     valid, msg = validate_username(username)
     if not valid:
         return jsonify({'code': 400, 'message': msg}), 400
+
+    if not captcha:
+        return jsonify({'code': 400, 'message': '请输入验证码'}), 400
+
+    stored_answer = session.get('captcha_answer')
+    if not stored_answer:
+        return jsonify({'code': 400, 'message': '验证码已过期，请刷新后重试'}), 400
+
+    if captcha != stored_answer:
+        return jsonify({'code': 400, 'message': '验证码错误'}), 400
+
+    import time
+    captcha_ts = session.get('captcha_ts', 0)
+    if time.time() - captcha_ts > 300:
+        return jsonify({'code': 400, 'message': '验证码已过期，请刷新后重试'}), 400
+
+    session.pop('captcha_answer', None)
+    session.pop('captcha_ts', None)
 
     locked, remaining = is_account_locked(username)
     if locked:
