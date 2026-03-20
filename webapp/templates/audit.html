@@ -5,6 +5,9 @@
 {% block content %}
 <div class="manage-header">
     <h1>用户审计日志</h1>
+    <div class="header-actions">
+        <button type="button" class="btn btn-primary" onclick="exportAuditLogs()">下载日志</button>
+    </div>
 </div>
 
 <div class="audit-filters">
@@ -39,6 +42,15 @@
                 <input type="date" id="endDateFilter">
             </div>
             <div class="filter-item">
+                <label>每页条数</label>
+                <select id="perPageSelect" onchange="onPerPageChange()">
+                    <option value="10">10条</option>
+                    <option value="20">20条</option>
+                    <option value="50" selected>50条</option>
+                    <option value="100">100条</option>
+                </select>
+            </div>
+            <div class="filter-item">
                 <label>&nbsp;</label>
                 <button type="button" class="btn btn-primary" onclick="loadAuditLogs(1)">查询</button>
                 <button type="button" class="btn" onclick="resetFilters()">重置</button>
@@ -67,11 +79,23 @@
     </table>
 </div>
 
-<div class="pagination" id="auditPagination"></div>
+<div class="pagination-wrapper">
+    <div class="pagination-info" id="paginationInfo"></div>
+    <div class="pagination" id="auditPagination"></div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <style>
+.manage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
 .audit-filters {
     background: var(--white);
     border-radius: 8px;
@@ -148,12 +172,21 @@
 .operation-tag.create_comment { background: #fff7e6; color: #fa8c16; }
 .operation-tag.delete_content { background: #fff1f0; color: #ff4d4f; }
 .operation-tag.delete_comment { background: #fff1f0; color: #ff4d4f; }
+.pagination-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+}
+.pagination-info {
+    font-size: 14px;
+    color: var(--text-light);
+}
 .pagination {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 5px;
-    margin-top: 20px;
 }
 .pagination button {
     padding: 6px 12px;
@@ -171,9 +204,15 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+.pagination .page-input {
+    width: 60px;
+    text-align: center;
+    padding: 6px 4px;
+}
 </style>
 <script>
 let currentPage = 1;
+let currentPerPage = 50;
 
 function getOperationLabel(op) {
     const labels = {
@@ -197,8 +236,9 @@ async function loadAuditLogs(page) {
     const username = document.getElementById('usernameFilter').value.trim();
     const startDate = document.getElementById('startDateFilter').value;
     const endDate = document.getElementById('endDateFilter').value;
+    const perPage = currentPerPage;
 
-    let url = `/api/audit/logs?page=${page}&per_page=50`;
+    let url = `/api/audit/logs?page=${page}&per_page=${perPage}`;
     if (operation) url += `&operation=${encodeURIComponent(operation)}`;
     if (username) url += `&username=${encodeURIComponent(username)}`;
     if (startDate) url += `&start_date=${encodeURIComponent(startDate)}`;
@@ -208,11 +248,18 @@ async function loadAuditLogs(page) {
     if (result.code === 200) {
         renderAuditLogs(result.data.logs);
         renderPagination(result.data.pagination);
+        updatePaginationInfo(result.data.pagination);
     } else if (result.code === 401 || result.code === 403) {
         window.location.href = '/login';
     } else {
         utils.showToast(result.message || '获取审计日志失败', 'error');
     }
+}
+
+function onPerPageChange() {
+    const select = document.getElementById('perPageSelect');
+    currentPerPage = parseInt(select.value, 10);
+    loadAuditLogs(1);
 }
 
 function renderAuditLogs(logs) {
@@ -252,6 +299,14 @@ function formatDetail(detail) {
     }
 }
 
+function updatePaginationInfo(pagination) {
+    const info = document.getElementById('paginationInfo');
+    if (!info) return;
+    const start = (pagination.page - 1) * pagination.per_page + 1;
+    const end = Math.min(pagination.page * pagination.per_page, pagination.total);
+    info.textContent = `共 ${pagination.total} 条记录，第 ${start}-${end} 条`;
+}
+
 function renderPagination(pagination) {
     const container = document.getElementById('auditPagination');
     if (!container) return;
@@ -262,19 +317,62 @@ function renderPagination(pagination) {
     }
 
     let html = '';
+    
+    html += `<button ${pagination.page <= 1 ? 'disabled' : ''} onclick="loadAuditLogs(1)" title="首页">首页</button>`;
     html += `<button ${pagination.page <= 1 ? 'disabled' : ''} onclick="loadAuditLogs(${pagination.page - 1})">上一页</button>`;
     
-    for (let i = 1; i <= pagination.pages; i++) {
-        if (i === 1 || i === pagination.pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
-            html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="loadAuditLogs(${i})">${i}</button>`;
-        } else if (i === pagination.page - 3 || i === pagination.page + 3) {
+    const maxVisible = 5;
+    let startPage = Math.max(1, pagination.page - Math.floor(maxVisible / 2));
+    let endPage = Math.min(pagination.pages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage + 1 < maxVisible) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    if (startPage > 1) {
+        html += `<button onclick="loadAuditLogs(1)">1</button>`;
+        if (startPage > 2) {
             html += `<span style="padding: 0 5px;">...</span>`;
         }
     }
     
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="${i === pagination.page ? 'active' : ''}" onclick="loadAuditLogs(${i})">${i}</button>`;
+    }
+    
+    if (endPage < pagination.pages) {
+        if (endPage < pagination.pages - 1) {
+            html += `<span style="padding: 0 5px;">...</span>`;
+        }
+        html += `<button onclick="loadAuditLogs(${pagination.pages})">${pagination.pages}</button>`;
+    }
+    
     html += `<button ${pagination.page >= pagination.pages ? 'disabled' : ''} onclick="loadAuditLogs(${pagination.page + 1})">下一页</button>`;
+    html += `<button ${pagination.page >= pagination.pages ? 'disabled' : ''} onclick="loadAuditLogs(${pagination.pages})" title="尾页">尾页</button>`;
+    
+    html += `<span style="margin-left: 10px;">跳转到</span>`;
+    html += `<input type="number" class="page-input" id="jumpToPage" min="1" max="${pagination.pages}" value="${pagination.page}" onkeypress="handleJumpKey(event)">`;
+    html += `<button onclick="jumpToPage()">跳转</button>`;
     
     container.innerHTML = html;
+}
+
+function jumpToPage() {
+    const input = document.getElementById('jumpToPage');
+    if (!input) return;
+    const page = parseInt(input.value, 10);
+    const pagination = window.currentPagination;
+    if (pagination && page >= 1 && page <= pagination.pages) {
+        loadAuditLogs(page);
+    } else {
+        utils.showToast('请输入有效的页码', 'error');
+    }
+}
+
+function handleJumpKey(event) {
+    if (event.key === 'Enter') {
+        jumpToPage();
+    }
 }
 
 function resetFilters() {
@@ -282,7 +380,24 @@ function resetFilters() {
     document.getElementById('usernameFilter').value = '';
     document.getElementById('startDateFilter').value = '';
     document.getElementById('endDateFilter').value = '';
+    document.getElementById('perPageSelect').value = '50';
+    currentPerPage = 50;
     loadAuditLogs(1);
+}
+
+function exportAuditLogs() {
+    const operation = document.getElementById('operationFilter').value;
+    const username = document.getElementById('usernameFilter').value.trim();
+    const startDate = document.getElementById('startDateFilter').value;
+    const endDate = document.getElementById('endDateFilter').value;
+
+    let url = `/api/audit/logs/export?`;
+    if (operation) url += `operation=${encodeURIComponent(operation)}&`;
+    if (username) url += `username=${encodeURIComponent(username)}&`;
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}&`;
+
+    window.location.href = url.slice(0, -1);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

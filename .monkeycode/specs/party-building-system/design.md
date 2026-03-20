@@ -91,6 +91,21 @@ graph TB
 | visit_date | DATE NOT NULL | 访问日期 |
 | visit_count | INT NOT NULL DEFAULT 0 | 访问次数 |
 
+#### 4.1.6 操作审计日志表 (operation_logs)
+
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| id | INT PRIMARY KEY AUTO_INCREMENT | 日志ID |
+| user_id | INT NULL | 用户ID |
+| username | VARCHAR(50) NOT NULL | 用户名 |
+| operation | VARCHAR(100) NOT NULL | 操作类型 |
+| detail | TEXT | 操作详情（JSON格式） |
+| ip_address | VARCHAR(45) | 客户端IP地址 |
+| user_agent | VARCHAR(255) | 浏览器User-Agent |
+| created_at | DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP | 创建时间 |
+
+**索引**: `idx_user_time (user_id, created_at)`, `idx_operation_time (operation, created_at)`, `idx_username_time (username, created_at)`
+
 ## 5. API接口设计
 
 ### 5.1 认证接口
@@ -150,6 +165,36 @@ graph TB
 |------|------|------|------|
 | GET | /api/stats/visits | 获取访问统计 | 否 |
 
+### 5.7 审计日志接口
+
+| 方法 | 路径 | 说明 | 认证 | 权限 |
+|------|------|------|------|------|
+| GET | /api/audit/logs | 获取审计日志列表（支持翻页） | 是 | 管理员 |
+| GET | /api/audit/operations | 获取支持的操作类型列表 | 是 | 管理员 |
+| GET | /api/audit/logs/export | 导出审计日志（CSV格式） | 是 | 管理员 |
+
+**GET /api/audit/logs 参数**:
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| page | int | 页码（默认1） |
+| per_page | int | 每页条数（默认50，最大200） |
+| operation | string | 操作类型过滤 |
+| user_id | int | 用户ID过滤 |
+| username | string | 用户名过滤 |
+| start_date | string | 开始日期（YYYY-MM-DD） |
+| end_date | string | 结束日期（YYYY-MM-DD） |
+
+**GET /api/audit/logs/export 参数**:
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| operation | string | 操作类型过滤 |
+| user_id | int | 用户ID过滤 |
+| username | string | 用户名过滤 |
+| start_date | string | 开始日期（YYYY-MM-DD） |
+| end_date | string | 结束日期（YYYY-MM-DD） |
+
 ## 6. 核心模块设计
 
 ### 6.1 认证模块
@@ -197,6 +242,30 @@ graph TB
 1. 记录访问 (record_visit)
 2. 获取访问统计 (get_visit_stats)
 3. 统计内容点赞数 (get_content_likes)
+```
+
+### 6.5 审计日志模块
+
+```
+审计日志模块负责记录和查询用户操作日志
+
+主要功能:
+1. 记录操作日志 (log_operation)
+2. 获取操作日志列表 (get_operation_logs)
+3. 获取日志总数 (get_log_count)
+4. 获取所有日志用于导出 (get_operation_logs_for_export)
+
+日志操作类型:
+- login_success: 登录成功
+- login_failed: 登录失败
+- logout: 登出
+- create_content: 发布内容
+- create_comment: 发布评论
+- update_profile: 更新资料
+- upload_avatar: 上传头像
+- change_password: 修改密码
+- delete_content: 删除内容
+- delete_comment: 删除评论
 ```
 
 ## 7. 安全设计
@@ -255,22 +324,33 @@ party-building-system/
 ├── utils/                 # 工具函数
 │   ├── auth.py            # 认证工具
 │   ├── security.py        # 安全工具
-│   └── stats.py           # 统计工具
+│   ├── stats.py           # 统计工具
+│   └── operation_log.py   # 操作审计日志工具
 ├── routes/                # 路由模块
 │   ├── auth.py            # 认证路由
 │   ├── users.py           # 用户管理路由
 │   ├── contents.py        # 内容路由
 │   ├── profile.py         # 用户资料路由（含头像上传）
-│   └── stats.py           # 统计路由
+│   ├── stats.py           # 统计路由
+│   └── audit.py           # 审计日志路由
 ├── static/                # 静态文件
 │   ├── css/
 │   │   └── style.css      # 样式文件
 │   └── js/
 │       └── main.js        # JavaScript
 ├── templates/             # HTML模板
+│   ├── base.html          # 基础模板
+│   ├── index.html         # 首页（党建之声列表）
+│   ├── login.html         # 登录页面
+│   ├── register.html      # 注册页面
+│   ├── content.html       # 内容详情页
+│   ├── create.html        # 创建内容页
+│   ├── manage.html        # 用户管理页（管理员）
+│   └── audit.html         # 审计日志页（管理员）
 ├── uploads/               # 上传的图片
 ├── db/                    # 数据库脚本
-│   └── init.sql          # 初始化脚本
+│   ├── init.sql          # 初始化脚本
+│   └── migration_audit.sql # 审计日志表迁移脚本
 └── deploy/                # 部署文档
     └── README.md          # 部署说明
 ```
@@ -308,11 +388,14 @@ party-building-system/
 - 评论添加、删除
 - 点赞、取消点赞
 - 访问统计
+- 审计日志查看、筛选、翻页
+- 审计日志下载（CSV格式）
 
 ### 12.2 安全测试
 - SQL注入测试
 - XSS攻击测试
 - 越权操作测试
+- 非管理员无法访问审计日志
 
 ## 13. 参考资料
 

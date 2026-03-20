@@ -147,3 +147,51 @@ def get_log_count(operation=None, user_id=None, start_date=None, end_date=None):
             cursor.execute(sql, params)
             result = cursor.fetchone()
             return result['count'] if result else 0
+
+
+def get_operation_logs_for_export(operation=None, user_id=None, start_date=None, end_date=None):
+    """
+    获取所有操作日志（用于导出）
+
+    参数:
+        operation: 按操作类型过滤
+        user_id: 按用户ID过滤
+        start_date: 开始日期
+        end_date: 结束日期
+
+    返回:
+        list: 日志列表
+    """
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            where_conditions = []
+            params = []
+            
+            if operation:
+                where_conditions.append("operation = %s")
+                params.append(operation)
+            
+            if user_id:
+                where_conditions.append("user_id = %s")
+                params.append(user_id)
+            
+            if start_date:
+                where_conditions.append("created_at >= %s")
+                params.append(start_date)
+            
+            if end_date:
+                where_conditions.append("created_at <= %s")
+                params.append(end_date)
+            
+            where_clause = " AND ".join(where_conditions) if where_conditions else "1=1"
+            
+            sql = f"""
+                SELECT id, user_id, username, operation, detail, 
+                       ip_address, user_agent, created_at
+                FROM operation_logs
+                WHERE {where_clause}
+                ORDER BY created_at DESC
+            """
+            
+            cursor.execute(sql, params)
+            return cursor.fetchall()
