@@ -291,3 +291,25 @@ def change_password():
     log_operation('change_password')
 
     return jsonify({'code': 200, 'message': '密码修改成功'})
+
+
+@profile_bp.route('/api/users/<int:user_id>/profile', methods=['GET'])
+def get_user_profile(user_id):
+    """获取指定用户的公开资料（任意登录用户可查看）"""
+    current_user_id = session.get('user_id')
+    if not current_user_id:
+        return jsonify({'code': 401, 'message': '请先登录'}), 401
+
+    with get_db() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """SELECT id, username, avatar, bio, created_at
+                   FROM users WHERE id = %s""",
+                (user_id,)
+            )
+            user = cursor.fetchone()
+
+            if not user:
+                return jsonify({'code': 404, 'message': '用户不存在'}), 404
+
+            return jsonify({'code': 200, 'data': user})

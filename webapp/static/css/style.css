@@ -223,6 +223,16 @@ body {
     margin-right: 15px;
 }
 
+.user-link {
+    color: var(--primary-red);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.user-link:hover {
+    text-decoration: underline;
+}
+
 /* 表单样式 */
 .form-container {
     max-width: 500px;

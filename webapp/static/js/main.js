@@ -381,7 +381,7 @@ const contents = {
             <div class="content-item" onclick="window.location.href='/content/${content.id}'">
                 <h2>${content.title}</h2>
                 <div class="meta">
-                    <span>作者: ${utils.escapeHtml(content.author_name)}</span>
+                    <span>作者: <a href="javascript:void(0)" onclick="event.stopPropagation();userCard.open(${content.author_id})" class="user-link">${utils.escapeHtml(content.author_name)}</a></span>
                     <span>发布时间: ${utils.formatDate(content.created_at)}</span>
                 </div>
             </div>
@@ -463,7 +463,7 @@ const contents = {
                 <div class="meta">
                     <span class="author-info">
                         ${this.renderAvatar(content.author_avatar, content.author_name)}
-                        <span>${utils.escapeHtml(content.author_name)}</span>
+                        <a href="javascript:void(0)" onclick="userCard.open(${content.author_id})" class="user-link">${utils.escapeHtml(content.author_name)}</a>
                     </span>
                     <span>发布时间: ${utils.formatDate(content.created_at)}</span>
                 </div>
@@ -541,7 +541,7 @@ const contents = {
                         <div class="comment-header">
                             <span class="comment-author">
                                 ${this.renderAvatar(comment.user_avatar, comment.user_name)}
-                                ${utils.escapeHtml(comment.user_name)}
+                                <a href="javascript:void(0)" onclick="userCard.open(${comment.user_id})" class="user-link">${utils.escapeHtml(comment.user_name)}</a>
                             </span>
                             <span class="comment-time">${utils.formatDate(comment.created_at)}</span>
                         </div>
@@ -877,7 +877,7 @@ const userManage = {
         tbody.innerHTML = users.map(user => `
             <tr>
                 <td>${user.id}</td>
-                <td>${utils.escapeHtml(user.username)}</td>
+                <td><a href="javascript:void(0)" onclick="userCard.open(${user.id})" class="user-link">${utils.escapeHtml(user.username)}</a></td>
                 <td><span class="role-badge ${user.role}">${user.role === 'admin' ? '管理员' : '普通用户'}</span></td>
                 <td>${utils.formatDate(user.created_at)}</td>
                 <td>

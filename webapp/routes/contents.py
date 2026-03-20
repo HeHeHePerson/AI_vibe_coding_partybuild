@@ -91,6 +91,7 @@ def get_contents():
             sql = f"""
                 SELECT c.id, c.title, c.images, c.category_id,
                        c.created_at as created_at,
+                       c.author_id as author_id,
                        u.username as author_name
                 FROM contents c
                 JOIN users u ON c.author_id = u.id

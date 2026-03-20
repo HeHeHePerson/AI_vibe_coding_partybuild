@@ -31,8 +31,156 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- 用户资料卡弹窗 -->
+    <div class="user-card-modal" id="userCardModal">
+        <div class="user-card-content">
+            <div class="user-card-close" onclick="userCard.close()">&times;</div>
+            <div class="user-card-avatar" id="userCardAvatar">
+                <span></span>
+            </div>
+            <div class="user-card-username" id="userCardUsername"></div>
+            <div class="user-card-bio" id="userCardBio"></div>
+            <div class="user-card-meta">
+                <span>注册于 <span id="userCardCreatedAt"></span></span>
+            </div>
+        </div>
+    </div>
+
     <!-- 底部信息 -->
     <div class="flag-decoration">安全技术部党支部</div>
+
+    <style>
+    .user-card-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    .user-card-modal.show {
+        display: flex;
+    }
+    .user-card-content {
+        background: #fff;
+        border-radius: 12px;
+        padding: 30px;
+        width: 320px;
+        max-width: 90%;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+    .user-card-close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 28px;
+        color: #999;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .user-card-close:hover {
+        color: #333;
+    }
+    .user-card-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #ddd;
+        margin: 0 auto 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: #666;
+        overflow: hidden;
+    }
+    .user-card-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .user-card-username {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    .user-card-bio {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 15px;
+        min-height: 20px;
+        word-wrap: break-word;
+    }
+    .user-card-meta {
+        font-size: 12px;
+        color: #999;
+    }
+    </style>
+
+    <script>
+    const userCard = {
+        open: async function(userId) {
+            const modal = document.getElementById('userCardModal');
+            if (!modal) return;
+
+            modal.classList.add('show');
+
+            const result = await utils.api(`/api/users/${userId}/profile`);
+            if (result.code === 200) {
+                this.render(result.data);
+            } else {
+                utils.showToast(result.message || '获取用户信息失败', 'error');
+                this.close();
+            }
+        },
+
+        close: function() {
+            const modal = document.getElementById('userCardModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        },
+
+        render: function(user) {
+            const avatarEl = document.getElementById('userCardAvatar');
+            const usernameEl = document.getElementById('userCardUsername');
+            const bioEl = document.getElementById('userCardBio');
+            const createdAtEl = document.getElementById('userCardCreatedAt');
+
+            if (usernameEl) usernameEl.textContent = user.username || '';
+
+            if (bioEl) {
+                bioEl.textContent = user.bio || '这个人很懒，什么都没写';
+            }
+
+            if (createdAtEl && user.created_at) {
+                createdAtEl.textContent = utils.formatDateOnly(user.created_at);
+            }
+
+            if (avatarEl) {
+                if (user.avatar) {
+                    avatarEl.innerHTML = `<img src="${utils.escapeHtml(user.avatar)}" alt="头像">`;
+                } else {
+                    const initial = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+                    avatarEl.innerHTML = `<span>${initial}</span>`;
+                }
+            }
+        }
+    };
+
+    document.getElementById('userCardModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            userCard.close();
+        }
+    });
+    </script>
 
     <script src="/static/js/main.js"></script>
     {% block extra_js %}{% endblock %}
