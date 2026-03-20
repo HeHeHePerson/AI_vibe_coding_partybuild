@@ -88,6 +88,19 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
+.nav-links a.admin-nav-link {
+    border: 2px solid var(--gold);
+    background: rgba(212, 175, 55, 0.15);
+}
+
+.nav-links a.admin-nav-link:hover {
+    background: rgba(212, 175, 55, 0.3);
+}
+
+.nav-links a.admin-nav-link::before {
+    content: "👑 ";
+}
+
 .user-info {
     display: flex;
     align-items: center;

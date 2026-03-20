@@ -269,9 +269,9 @@ const auth = {
                 navLinks.innerHTML = `
                     <a href="/">首页</a>
                     <a href="/create">发布内容</a>
-                    <a href="/manage">用户管理</a>
-                    <a href="/notices">公告管理</a>
-                    <a href="/audit">审计日志</a>
+                    <a href="/manage" class="admin-nav-link">用户管理</a>
+                    <a href="/notices" class="admin-nav-link">公告管理</a>
+                    <a href="/audit" class="admin-nav-link">审计日志</a>
                 `;
             } else {
                     navLinks.innerHTML = `
