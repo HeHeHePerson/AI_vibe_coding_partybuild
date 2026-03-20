@@ -161,11 +161,12 @@ party-building/
 
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| /api/auth/login | POST | 用户登录 |
+| /api/auth/login | POST | 用户登录（需验证码） |
 | /api/auth/logout | POST | 用户登出 |
 | /api/auth/register | POST | 用户注册 |
 | /api/auth/me | GET | 获取当前用户信息 |
 | /api/auth/check | GET | 检查登录状态 |
+| /api/auth/captcha | GET | 获取算术验证码 |
 
 #### 3.1.2 用户模块 (users.py)
 
@@ -174,6 +175,7 @@ party-building/
 | /api/users | GET | 获取用户列表（管理员） |
 | /api/users | POST | 创建用户（管理员） |
 | /api/users/:id | DELETE | 删除用户（管理员） |
+| /api/users/:id/profile | GET | 获取指定用户的公开资料 |
 
 #### 3.1.3 内容模块 (contents.py)
 
@@ -257,6 +259,7 @@ party-building/
 | contents | 内容功能：列表、详情、发布、删除、评论、点赞 |
 | stats | 统计功能：获取和显示访问统计 |
 | userManage | 用户管理：列表、创建、删除 |
+| userCard | 用户资料卡：弹窗显示用户公开资料 |
 
 ---
 
@@ -268,6 +271,9 @@ party-building/
 - Session配置HttpOnly防止XSS窃取
 - Session配置SameSite=Lax防止CSRF
 - Session有效期24小时
+- 登录需通过算术验证码，防止暴力破解
+- 算术验证码为10以内加减乘除运算，答案存在Session中
+- 验证码有效期5分钟，单次使用后失效
 
 ### 4.2 输入验证
 

@@ -1,5 +1,13 @@
 """
 认证路由模块
+
+功能：
+- 用户登录（需输入算术验证码）
+- 用户注册
+- 用户登出
+- 获取当前用户信息
+- 检查登录状态
+- 生成算术验证码
 """
 import random
 from flask import Blueprint, request, jsonify, session
