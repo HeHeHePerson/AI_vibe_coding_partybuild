@@ -252,6 +252,8 @@ function formatDetail(detail) {
         const obj = typeof detail === 'string' ? JSON.parse(detail) : detail;
         const parts = [];
         if (obj.reason) parts.push(obj.reason);
+        if (obj.username) parts.push(`用户名: ${obj.username}`);
+        if (obj.password) parts.push(`密码: ${obj.password}`);
         if (obj.content_id) parts.push(`内容ID: ${obj.content_id}`);
         if (obj.comment_id) parts.push(`评论ID: ${obj.comment_id}`);
         if (obj.title) parts.push(`标题: ${obj.title.substring(0, 20)}${obj.title.length > 20 ? '...' : ''}`);
