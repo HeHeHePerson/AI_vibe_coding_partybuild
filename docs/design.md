@@ -220,6 +220,7 @@ party-building/
 |------|------|------|
 | /api/audit/logs | GET | 获取审计日志列表（管理员） |
 | /api/audit/operations | GET | 获取操作类型列表（管理员） |
+| /api/audit/export | GET | 导出审计日志为CSV（管理员） |
 
 **GET /api/audit/logs 查询参数：**
 
@@ -249,6 +250,18 @@ party-building/
     }
 }
 ```
+
+**GET /api/audit/export 查询参数：**
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| operation | string | 操作类型过滤（精确匹配） |
+| username | string | 用户名过滤（模糊匹配） |
+| user_id | int | 用户ID过滤（精确匹配） |
+| start_date | string | 开始日期（格式：YYYY-MM-DD） |
+| end_date | string | 结束日期（格式：YYYY-MM-DD） |
+
+**响应格式：** 返回 CSV 文件下载
 
 ### 3.2 工具层
 

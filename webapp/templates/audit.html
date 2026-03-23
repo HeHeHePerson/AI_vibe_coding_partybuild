@@ -42,6 +42,7 @@
                 <label>&nbsp;</label>
                 <button type="button" class="btn btn-primary" onclick="loadAuditLogs(1)">查询</button>
                 <button type="button" class="btn" onclick="resetFilters()">重置</button>
+                <button type="button" class="btn btn-success" onclick="exportAuditLogs()">导出CSV</button>
             </div>
         </div>
     </form>
@@ -171,6 +172,15 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+.btn-success {
+    background: #52c41a;
+    color: white;
+    border-color: #52c41a;
+}
+.btn-success:hover {
+    background: #73d13d;
+    border-color: #73d13d;
+}
 </style>
 <script>
 let currentPage = 1;
@@ -283,6 +293,21 @@ function resetFilters() {
     document.getElementById('startDateFilter').value = '';
     document.getElementById('endDateFilter').value = '';
     loadAuditLogs(1);
+}
+
+function exportAuditLogs() {
+    const operation = document.getElementById('operationFilter').value;
+    const username = document.getElementById('usernameFilter').value.trim();
+    const startDate = document.getElementById('startDateFilter').value;
+    const endDate = document.getElementById('endDateFilter').value;
+
+    let url = '/api/audit/export?';
+    if (operation) url += `operation=${encodeURIComponent(operation)}&`;
+    if (username) url += `username=${encodeURIComponent(username)}&`;
+    if (startDate) url += `start_date=${encodeURIComponent(startDate)}&`;
+    if (endDate) url += `end_date=${encodeURIComponent(endDate)}`;
+
+    window.location.href = url;
 }
 
 document.addEventListener('DOMContentLoaded', function() {

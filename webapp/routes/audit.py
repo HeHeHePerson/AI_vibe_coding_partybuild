@@ -4,8 +4,11 @@
 功能：
 - 记录用户登录、登出、发布内容、发布评论等操作
 - 提供管理员查看审计日志的接口
+- 提供审计日志导出功能
 """
-from flask import Blueprint, request, jsonify, session
+import csv
+import io
+from flask import Blueprint, request, jsonify, session, Response
 from webapp.utils.operation_log import get_operation_logs, get_log_count
 
 audit_bp = Blueprint('audit', __name__)
@@ -92,3 +95,61 @@ def get_operation_types():
     ]
 
     return jsonify({'code': 200, 'data': operations})
+
+
+@audit_bp.route('/api/audit/export', methods=['GET'])
+def export_audit_logs():
+    """导出审计日志为CSV（仅管理员）"""
+    ok, error_resp, status = require_admin()
+    if not ok:
+        return error_resp, status
+
+    operation = request.args.get('operation', '').strip()
+    user_id = request.args.get('user_id', type=int)
+    username = request.args.get('username', '').strip()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+
+    logs = get_operation_logs(
+        limit=10000,
+        offset=0,
+        operation=operation if operation else None,
+        user_id=user_id if user_id else None,
+        username=username if username else None,
+        start_date=start_date if start_date else None,
+        end_date=end_date if end_date else None
+    )
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', '时间', '用户名', '操作类型', '详情', 'IP地址', 'User-Agent'])
+
+    for log in logs:
+        detail = log.get('detail', '') or ''
+        if detail:
+            try:
+                import json
+                detail_obj = json.loads(detail)
+                detail = '; '.join([f"{k}: {v}" for k, v in detail_obj.items()])
+            except:
+                pass
+
+        writer.writerow([
+            log.get('id', ''),
+            log.get('created_at', ''),
+            log.get('username', ''),
+            log.get('operation', ''),
+            detail,
+            log.get('ip_address', ''),
+            log.get('user_agent', '')
+        ])
+
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={
+            'Content-Disposition': 'attachment; filename=audit_logs.csv',
+            'Content-Type': 'text/csv; charset=utf-8'
+        }
+    )
