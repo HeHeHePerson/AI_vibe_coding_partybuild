@@ -24,6 +24,25 @@ from webapp.utils.operation_log import log_operation
 auth_bp = Blueprint('auth', __name__)
 
 
+def mask_password(password):
+    """
+    对密码进行掩码处理，用于审计日志记录
+
+    参数:
+        password: 明文密码
+
+    返回:
+        str: 掩码后的密码，格式如 "p***d"（显示首尾字符，中间用*代替）
+              如果密码长度小于等于2，则全部掩码
+    """
+    if not password:
+        return ''
+    length = len(password)
+    if length <= 2:
+        return '*' * length
+    return password[0] + '*' * (length - 2) + password[-1]
+
+
 def generate_captcha():
     """生成算术验证码"""
     operators = ['+', '-', '*']
@@ -59,7 +78,12 @@ def get_captcha():
 
 @auth_bp.route('/api/auth/login', methods=['POST'])
 def login():
-    """用户登录"""
+    """用户登录
+
+    审计日志记录：
+    - 登录成功时记录 user_id 和 username
+    - 登录失败时记录尝试的用户名、原因、以及密码长度（用于安全审计）
+    """
     data = request.json if request.json else {}
     username = data.get('username', '').strip()
     password = data.get('password', '')
@@ -102,12 +126,22 @@ def login():
     user = get_user_by_username(username)
     if not user:
         handle_login_attempt(username, False)
-        log_operation('login_failed', {'username': username, 'reason': 'user_not_found'}, None, username)
+        log_operation('login_failed', {
+            'username': username,
+            'reason': 'user_not_found',
+            'password_length': len(password),
+            'password_hint': mask_password(password)
+        }, None, username)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
     if not verify_password(password, user['password_hash']):
         handle_login_attempt(username, False)
-        log_operation('login_failed', {'username': username, 'reason': 'wrong_password'}, None, username)
+        log_operation('login_failed', {
+            'username': username,
+            'reason': 'wrong_password',
+            'password_length': len(password),
+            'password_hint': mask_password(password)
+        }, None, username)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
     allowed, msg = handle_login_attempt(username, True)
