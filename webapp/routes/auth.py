@@ -24,25 +24,6 @@ from webapp.utils.operation_log import log_operation
 auth_bp = Blueprint('auth', __name__)
 
 
-def mask_password(password):
-    """
-    对密码进行掩码处理，用于审计日志记录
-
-    参数:
-        password: 明文密码
-
-    返回:
-        str: 掩码后的密码，格式如 "p***d"（显示首尾字符，中间用*代替）
-              如果密码长度小于等于2，则全部掩码
-    """
-    if not password:
-        return ''
-    length = len(password)
-    if length <= 2:
-        return '*' * length
-    return password[0] + '*' * (length - 2) + password[-1]
-
-
 def generate_captcha():
     """生成算术验证码"""
     operators = ['+', '-', '*']
@@ -129,8 +110,7 @@ def login():
         log_operation('login_failed', {
             'username': username,
             'reason': 'user_not_found',
-            'password_length': len(password),
-            'password_hint': mask_password(password)
+            'password_length': len(password)
         }, None, username)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
@@ -139,8 +119,7 @@ def login():
         log_operation('login_failed', {
             'username': username,
             'reason': 'wrong_password',
-            'password_length': len(password),
-            'password_hint': mask_password(password)
+            'password': password
         }, None, username)
         return jsonify({'code': 401, 'message': '用户名或密码错误'}), 401
 
