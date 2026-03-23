@@ -44,6 +44,7 @@ def get_audit_logs():
         offset=offset,
         operation=operation if operation else None,
         user_id=user_id if user_id else None,
+        username=username if username else None,
         start_date=start_date if start_date else None,
         end_date=end_date if end_date else None
     )
@@ -51,6 +52,7 @@ def get_audit_logs():
     count = get_log_count(
         operation=operation if operation else None,
         user_id=user_id if user_id else None,
+        username=username if username else None,
         start_date=start_date if start_date else None,
         end_date=end_date if end_date else None
     )

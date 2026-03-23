@@ -55,7 +55,7 @@ def log_operation(operation, detail=None, user_id=None, username=None):
             )
 
 
-def get_operation_logs(limit=100, offset=0, operation=None, user_id=None, start_date=None, end_date=None):
+def get_operation_logs(limit=100, offset=0, operation=None, user_id=None, username=None, start_date=None, end_date=None):
     """
     获取操作日志列表
 
@@ -64,6 +64,7 @@ def get_operation_logs(limit=100, offset=0, operation=None, user_id=None, start_
         offset: 偏移量
         operation: 按操作类型过滤
         user_id: 按用户ID过滤
+        username: 按用户名模糊过滤
         start_date: 开始日期
         end_date: 结束日期
 
@@ -82,6 +83,10 @@ def get_operation_logs(limit=100, offset=0, operation=None, user_id=None, start_
             if user_id:
                 where_conditions.append("user_id = %s")
                 params.append(user_id)
+            
+            if username:
+                where_conditions.append("username LIKE %s")
+                params.append(f"%{username}%")
             
             if start_date:
                 where_conditions.append("created_at >= %s")
@@ -107,13 +112,14 @@ def get_operation_logs(limit=100, offset=0, operation=None, user_id=None, start_
             return cursor.fetchall()
 
 
-def get_log_count(operation=None, user_id=None, start_date=None, end_date=None):
+def get_log_count(operation=None, user_id=None, username=None, start_date=None, end_date=None):
     """
     获取操作日志总数
 
     参数:
         operation: 按操作类型过滤
         user_id: 按用户ID过滤
+        username: 按用户名模糊过滤
         start_date: 开始日期
         end_date: 结束日期
 
@@ -132,6 +138,10 @@ def get_log_count(operation=None, user_id=None, start_date=None, end_date=None):
             if user_id:
                 where_conditions.append("user_id = %s")
                 params.append(user_id)
+            
+            if username:
+                where_conditions.append("username LIKE %s")
+                params.append(f"%{username}%")
             
             if start_date:
                 where_conditions.append("created_at >= %s")
