@@ -156,8 +156,6 @@ def login():
     }
     session['last_activity'] = int(time.time())
 
-    from webapp.utils.operation_log import log_operation
-    from webapp.utils.login_security import get_client_ip
     log_operation('login_success', {'username': username}, user['id'], user['username'])
 
     return jsonify({
