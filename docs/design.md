@@ -182,7 +182,7 @@ party-building/
 | /api/users | GET | 获取用户列表（管理员） |
 | /api/users | POST | 创建用户（管理员） |
 | /api/users/:id | DELETE | 删除用户（管理员） |
-| /api/users/:id/profile | GET | 获取指定用户的公开资料 |
+| /api/users/:id/profile | GET | 获取指定用户的公开资料（需登录，返回字段包含 role 用于前端区分管理员） |
 
 #### 3.1.3 内容模块 (contents.py)
 
@@ -315,7 +315,7 @@ party-building/
 | contents | 内容功能：列表、详情、发布、删除、评论、点赞 |
 | stats | 统计功能：获取和显示访问统计 |
 | userManage | 用户管理：列表、创建、删除 |
-| userCard | 用户资料卡：弹窗显示用户公开资料 |
+| userCard | 用户资料卡：弹窗显示用户公开资料，支持管理员标识，需登录才能查看 |
 
 ---
 

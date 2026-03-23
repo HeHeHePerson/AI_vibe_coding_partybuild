@@ -296,7 +296,11 @@ def change_password():
 
 @profile_bp.route('/api/users/<int:user_id>/profile', methods=['GET'])
 def get_user_profile(user_id):
-    """获取指定用户的公开资料（任意登录用户可查看）"""
+    """获取指定用户的公开资料（任意登录用户可查看）
+
+    返回字段：id, username, role, avatar, bio, created_at
+    注意：role 字段用于前端区分管理员身份并显示特殊标识
+    """
     current_user_id = session.get('user_id')
     if not current_user_id:
         return jsonify({'code': 401, 'message': '请先登录'}), 401
@@ -304,7 +308,7 @@ def get_user_profile(user_id):
     with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """SELECT id, username, avatar, bio, created_at
+                """SELECT id, username, role, avatar, bio, created_at
                    FROM users WHERE id = %s""",
                 (user_id,)
             )

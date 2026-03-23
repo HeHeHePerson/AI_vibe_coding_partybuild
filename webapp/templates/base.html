@@ -33,12 +33,15 @@
 
     <!-- 用户资料卡弹窗 -->
     <div class="user-card-modal" id="userCardModal">
-        <div class="user-card-content">
+        <div class="user-card-content" id="userCardContent">
             <div class="user-card-close" onclick="userCard.close()">&times;</div>
             <div class="user-card-avatar" id="userCardAvatar">
                 <span></span>
             </div>
-            <div class="user-card-username" id="userCardUsername"></div>
+            <div class="user-card-header">
+                <div class="user-card-username" id="userCardUsername"></div>
+                <span class="user-card-role" id="userCardRole"></span>
+            </div>
             <div class="user-card-bio" id="userCardBio"></div>
             <div class="user-card-meta">
                 <span>注册于 <span id="userCardCreatedAt"></span></span>
@@ -122,15 +125,44 @@
         font-size: 12px;
         color: #999;
     }
+    .user-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .user-card-role {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: normal;
+    }
+    .user-card-role.admin {
+        background: linear-gradient(135deg, #ff4d4f, #ff7875);
+        color: #fff;
+    }
+    .user-card-content.admin .user-card-avatar {
+        border: 3px solid #ff4d4f;
+        box-shadow: 0 0 12px rgba(255, 77, 79, 0.4);
+    }
     </style>
 
     <script>
     const userCard = {
         open: async function(userId) {
+            if (!currentUser) {
+                utils.showToast('请先登录后再查看用户资料', 'error');
+                return;
+            }
+
             const modal = document.getElementById('userCardModal');
+            const content = document.getElementById('userCardContent');
             if (!modal) return;
 
             modal.classList.add('show');
+            content.classList.remove('admin');
 
             const result = await utils.api(`/api/users/${userId}/profile`);
             if (result.code === 200) {
@@ -143,18 +175,35 @@
 
         close: function() {
             const modal = document.getElementById('userCardModal');
+            const content = document.getElementById('userCardContent');
             if (modal) {
                 modal.classList.remove('show');
+            }
+            if (content) {
+                content.classList.remove('admin');
             }
         },
 
         render: function(user) {
+            const content = document.getElementById('userCardContent');
             const avatarEl = document.getElementById('userCardAvatar');
             const usernameEl = document.getElementById('userCardUsername');
+            const roleEl = document.getElementById('userCardRole');
             const bioEl = document.getElementById('userCardBio');
             const createdAtEl = document.getElementById('userCardCreatedAt');
 
             if (usernameEl) usernameEl.textContent = user.username || '';
+
+            if (roleEl) {
+                if (user.role === 'admin') {
+                    roleEl.textContent = '管理员';
+                    roleEl.className = 'user-card-role admin';
+                    if (content) content.classList.add('admin');
+                } else {
+                    roleEl.textContent = '';
+                    roleEl.className = 'user-card-role';
+                }
+            }
 
             if (bioEl) {
                 bioEl.textContent = user.bio || '这个人很懒，什么都没写';
