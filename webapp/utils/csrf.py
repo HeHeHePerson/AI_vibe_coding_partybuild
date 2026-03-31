@@ -17,7 +17,7 @@ from flask import session, request
 
 
 CSRF_TOKEN_LENGTH = 32
-CSRF_TOKEN_EXPIRE = 3600
+CSRF_TOKEN_EXPIRE = 10800
 
 
 def generate_csrf_token():

@@ -222,11 +222,24 @@ const utils = {
         const defaultOptions = {
             credentials: 'same-origin'
         };
+        
+        // 自动添加CSRF令牌到非GET请求
+        if (options.method && options.method.toUpperCase() !== 'GET') {
+            const csrfToken = document.getElementById('globalCsrfToken')?.value || '';
+            options.headers = {
+                'X-CSRF-Token': csrfToken,
+                ...options.headers
+            };
+        }
+        
         const mergedOptions = { ...defaultOptions, ...options };
+        console.log('API Request:', url, mergedOptions);
 
         try {
             const response = await fetch(url, mergedOptions);
+            console.log('API Response Status:', response.status);
             const data = await response.json();
+            console.log('API Response Data:', data);
             return data;
         } catch (error) {
             console.error('API请求失败:', error);
@@ -269,6 +282,10 @@ const auth = {
                 navLinks.innerHTML = `
                     <a href="/">首页</a>
                     <a href="/create">发布内容</a>
+                    <a href="/party/knowledge">党建知识</a>
+                    <a href="/party/activities">组织活动</a>
+                    <a href="/party/fees">党费缴纳</a>
+                    <a href="/party/integral">党员积分</a>
                     <a href="/manage">用户管理</a>
                     <a href="/notices">公告管理</a>
                     <a href="/audit">审计日志</a>
@@ -277,6 +294,10 @@ const auth = {
                     navLinks.innerHTML = `
                         <a href="/">首页</a>
                         <a href="/create">发布内容</a>
+                        <a href="/party/knowledge">党建知识</a>
+                        <a href="/party/activities">组织活动</a>
+                        <a href="/party/fees">党费缴纳</a>
+                        <a href="/party/integral">党员积分</a>
                     `;
                 }
             }

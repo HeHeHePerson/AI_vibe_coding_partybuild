@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+
+{% block title %}党费缴纳 - 智慧党建系统{% endblock %}
+
+{% block content %}
+    <div class="party-fees-page">
+        <h1 class="page-title">党费缴纳</h1>
+        
+        <!-- 缴费信息 -->
+        <div class="fee-info-card">
+            <h2>个人缴费信息</h2>
+            <div class="info-grid" id="userFeeInfo">
+                <!-- 个人缴费信息将通过JavaScript动态添加 -->
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <!-- 缴费记录 -->
+        <div class="fee-records-section">
+            <h2>缴费记录</h2>
+            <div class="content-list" id="feeRecordsList">
+                <!-- 缴费记录将通过JavaScript动态添加 -->
+                <div class="loading">加载中...</div>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="pagination" id="pagination">
+                <!-- 分页控件将通过JavaScript动态添加 -->
+            </div>
+        </div>
+        
+        <!-- 缴费表单 -->
+        <div class="payment-form-section" id="paymentFormSection" style="display: none;">
+            <h2>在线缴费</h2>
+            <form id="paymentForm">
+                <div class="form-group">
+                    <label for="amount">缴费金额 (元)</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0" required class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="payment_method">缴费方式</label>
+                    <select id="payment_method" name="payment_method" required class="form-control">
+                        <option value="alipay">支付宝</option>
+                        <option value="wechat">微信支付</option>
+                        <option value="bank">银行转账</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="remark">备注</label>
+                    <textarea id="remark" name="remark" rows="3" class="form-control"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">确认缴费</button>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 党费缴纳模块
+const partyFees = {
+    currentPage: 1,
+    
+    init: function() {
+        this.loadUserFeeInfo();
+        this.loadFeeRecords();
+        this.initPaymentForm();
+    },
+    
+    loadUserFeeInfo: async function() {
+        const infoContainer = document.getElementById('userFeeInfo');
+        infoContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        if (!currentUser) {
+            infoContainer.innerHTML = '<div class="empty">请先登录后查看缴费信息</div>';
+            return;
+        }
+        
+        const result = await utils.api('/api/party/fees/user-info');
+        if (result.code === 200) {
+            this.renderUserFeeInfo(result.data);
+        } else {
+            utils.showToast('获取缴费信息失败', 'error');
+            infoContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    loadFeeRecords: async function() {
+        const listContainer = document.getElementById('feeRecordsList');
+        listContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        if (!currentUser) {
+            listContainer.innerHTML = '<div class="empty">请先登录后查看缴费记录</div>';
+            return;
+        }
+        
+        const result = await utils.api(`/api/party/fees?page=${this.currentPage}&per_page=10`);
+        if (result.code === 200) {
+            this.renderFeeRecords(result.data.list, result.data.pagination);
+        } else {
+            utils.showToast('获取缴费记录失败', 'error');
+            listContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    renderUserFeeInfo: function(userInfo) {
+        const infoContainer = document.getElementById('userFeeInfo');
+        
+        infoContainer.innerHTML = `
+            <div class="info-item">
+                <span class="label">姓名:</span>
+                <span class="value">${userInfo.name || '未设置'}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">党员编号:</span>
+                <span class="value">${userInfo.party_id || '未设置'}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">月缴费标准:</span>
+                <span class="value">${userInfo.monthly_fee || 0} 元</span>
+            </div>
+            <div class="info-item">
+                <span class="label">累计缴费:</span>
+                <span class="value">${userInfo.total_paid || 0} 元</span>
+            </div>
+            <div class="info-item">
+                <span class="label">待缴费金额:</span>
+                <span class="value overdue">${userInfo.overdue_amount || 0} 元</span>
+            </div>
+            <div class="info-actions">
+                <button onclick="partyFees.showPaymentForm()" class="btn btn-primary">在线缴费</button>
+            </div>
+        `;
+    },
+    
+    renderFeeRecords: function(recordsList, pagination) {
+        const listContainer = document.getElementById('feeRecordsList');
+        const paginationContainer = document.getElementById('pagination');
+        
+        if (!recordsList || recordsList.length === 0) {
+            listContainer.innerHTML = '<div class="empty">暂无缴费记录</div>';
+            paginationContainer.innerHTML = '';
+            return;
+        }
+        
+        listContainer.innerHTML = recordsList.map(record => `
+            <div class="content-item">
+                <div class="record-header">
+                    <h3>缴费记录 #${record.id}</h3>
+                    <span class="status-badge ${record.status}">${this.getStatusText(record.status)}</span>
+                </div>
+                <div class="record-details">
+                    <p><strong>缴费人:</strong> ${record.username || '未知'}</p>
+                    <p><strong>金额:</strong> ${record.amount} 元</p>
+                    <p><strong>缴费方式:</strong> ${this.getPaymentMethodText(record.payment_method)}</p>
+                    <p><strong>缴费日期:</strong> ${utils.formatDate(record.created_at)}</p>
+                    ${record.remark ? `<p><strong>备注:</strong> ${record.remark}</p>` : ''}
+                </div>
+                ${currentUser && currentUser.role === 'admin' ? `
+                <div class="record-actions">
+                    ${record.status === 'paid' ? `<button onclick="partyFees.updateFeeStatus(${record.id}, 'completed')" class="btn btn-sm btn-success">标记为处理完毕</button>` : ''}
+                    ${record.status === 'completed' ? `<button onclick="partyFees.updateFeeStatus(${record.id}, 'paid')" class="btn btn-sm btn-warning">标记为处理中</button>` : ''}
+                    <button onclick="partyFees.deleteFeeRecord(${record.id})" class="btn btn-sm btn-danger">删除</button>
+                </div>
+                ` : ''}
+            </div>
+        `).join('');
+        
+        // 渲染分页
+        this.renderPagination(pagination);
+    },
+    
+    renderPagination: function(pagination) {
+        const paginationContainer = document.getElementById('pagination');
+        let html = '';
+        
+        if (pagination.pages > 1) {
+            html = `
+                <div class="pagination-controls">
+                    <button ${this.currentPage === 1 ? 'disabled' : ''} onclick="partyFees.goToPage(${this.currentPage - 1})" class="btn btn-sm">上一页</button>
+                    <span>第 ${this.currentPage} 页，共 ${pagination.pages} 页</span>
+                    <button ${this.currentPage === pagination.pages ? 'disabled' : ''} onclick="partyFees.goToPage(${this.currentPage + 1})" class="btn btn-sm">下一页</button>
+                </div>
+            `;
+        }
+        
+        paginationContainer.innerHTML = html;
+    },
+    
+    goToPage: function(page) {
+        this.currentPage = page;
+        this.loadFeeRecords();
+    },
+    
+    showPaymentForm: function() {
+        if (!currentUser) {
+            utils.showToast('请先登录后再进行缴费', 'error');
+            return;
+        }
+        
+        document.getElementById('paymentFormSection').style.display = 'block';
+        window.scrollTo({ top: document.getElementById('paymentFormSection').offsetTop, behavior: 'smooth' });
+    },
+    
+    initPaymentForm: function() {
+        const form = document.getElementById('paymentForm');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const amount = parseFloat(document.getElementById('amount').value);
+                const paymentMethod = document.getElementById('payment_method').value;
+                const remark = document.getElementById('remark').value;
+                
+                if (isNaN(amount) || amount <= 0) {
+                    utils.showToast('请输入有效的缴费金额', 'error');
+                    return;
+                }
+                
+                const result = await utils.api('/api/party/fees/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        amount,
+                        payment_method: paymentMethod,
+                        remark
+                    })
+                });
+                
+                if (result.code === 200) {
+                    utils.showToast('缴费成功', 'success');
+                    form.reset();
+                    document.getElementById('paymentFormSection').style.display = 'none';
+                    this.loadUserFeeInfo();
+                    this.loadFeeRecords();
+                } else {
+                    utils.showToast(result.message || '缴费失败', 'error');
+                }
+            });
+        }
+    },
+    
+    getPaymentMethodText: function(method) {
+        const methods = {
+            'alipay': '支付宝',
+            'wechat': '微信支付',
+            'bank': '银行转账'
+        };
+        return methods[method] || method;
+    },
+    
+    getStatusText: function(status) {
+        const statusMap = {
+            'pending': '待处理',
+            'paid': '处理中',
+            'overdue': '逾期',
+            'completed': '处理完毕'
+        };
+        return statusMap[status] || status;
+    },
+    
+    updateFeeStatus: async function(feeId, newStatus) {
+        if (!currentUser || currentUser.role !== 'admin') {
+            utils.showToast('权限不足', 'error');
+            return;
+        }
+        
+        const result = await utils.api(`/api/party/fees/${feeId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (result.code === 200) {
+            utils.showToast('状态更新成功', 'success');
+            this.loadFeeRecords();
+        } else {
+            utils.showToast(result.message || '状态更新失败', 'error');
+        }
+    },
+    
+    deleteFeeRecord: async function(feeId) {
+        if (!currentUser || currentUser.role !== 'admin') {
+            utils.showToast('权限不足', 'error');
+            return;
+        }
+        
+        if (!confirm('确定要删除这条缴费记录吗？此操作不可恢复！')) {
+            return;
+        }
+        
+        const result = await utils.api(`/api/party/fees/${feeId}`, {
+            method: 'DELETE'
+        });
+        
+        if (result.code === 200) {
+            utils.showToast('删除成功', 'success');
+            this.loadFeeRecords();
+        } else {
+            utils.showToast(result.message || '删除失败', 'error');
+        }
+    }
+};
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', async function() {
+    await auth.checkAuth();
+    partyFees.init();
+});
+</script>
+
+<style>
+.party-fees-page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-title {
+    color: var(--primary-red);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.fee-info-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.fee-info-card h2 {
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 4px;
+}
+
+.info-item .label {
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.info-item .value {
+    color: var(--text-light);
+}
+
+.info-item .value.overdue {
+    color: #ff4d4f;
+    font-weight: bold;
+}
+
+.info-actions {
+    margin-top: 20px;
+    text-align: right;
+}
+
+.fee-records-section {
+    margin-bottom: 30px;
+}
+
+.fee-records-section h2 {
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.payment-form-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.payment-form-section h2 {
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.pagination {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-badge.completed {
+    background: #f6ffed;
+    color: #52c41a;
+}
+
+.status-badge.pending {
+    background: #fffbe6;
+    color: #faad14;
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.record-header h3 {
+    color: var(--primary-red);
+    font-size: 16px;
+}
+
+.record-details {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text-dark);
+}
+
+.record-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.record-actions .btn {
+    font-size: 12px;
+    padding: 5px 12px;
+}
+
+.status-badge.paid {
+    background: #e6f7ff;
+    color: #1890ff;
+}
+
+.status-badge.overdue {
+    background: #fff1f0;
+    color: #ff4d4f;
+}
+
+.content-item {
+    position: relative;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.content-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,720 @@
+{% extends "base.html" %}
+
+{% block title %}组织活动 - 智慧党建系统{% endblock %}
+
+{% block content %}
+    <div class="party-activities-page">
+        <h1 class="page-title">组织活动</h1>
+        
+        <!-- 操作栏 -->
+        <div class="action-bar">
+            <button id="createActivityBtn" class="btn btn-primary">新建组织活动</button>
+        </div>
+        
+        <!-- 新建组织活动模态框 -->
+        <div id="createActivityModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>新建组织活动</h3>
+                    <button class="close-btn" onclick="partyActivities.closeCreateModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="createActivityForm">
+                        <div class="form-group">
+                            <label for="activityTitle">标题</label>
+                            <input type="text" id="activityTitle" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="activityContent">内容</label>
+                            <textarea id="activityContent" class="form-control" rows="6" required></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="activityStartTime">开始时间</label>
+                                <input type="datetime-local" id="activityStartTime" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="activityEndTime">结束时间</label>
+                                <input type="datetime-local" id="activityEndTime" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="activityLocation">地点</label>
+                                <input type="text" id="activityLocation" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="activityOrganizer">组织者</label>
+                                <input type="text" id="activityOrganizer" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="activityMaxParticipants">最大参与人数</label>
+                            <input type="number" id="activityMaxParticipants" class="form-control" min="1">
+                        </div>
+                        <div class="form-group" id="reviewNotice" style="display: none;">
+                            <div class="alert alert-info">
+                                提示：您的活动需要管理员审核后才能发布
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="partyActivities.closeCreateModal()">取消</button>
+                    <button class="btn btn-primary" onclick="partyActivities.createActivity()">保存</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 活动详情模态框 -->
+        <div id="activityDetailModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="detailTitle">活动详情</h3>
+                    <button class="close-btn" onclick="partyActivities.closeDetailModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="detailContent">
+                    <div class="loading">加载中...</div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="partyActivities.closeDetailModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 活动列表 -->
+        <div class="content-list" id="activitiesList">
+            <!-- 活动项将通过JavaScript动态添加 -->
+            <div class="loading">加载中...</div>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="pagination" id="pagination">
+            <!-- 分页控件将通过JavaScript动态添加 -->
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 组织活动模块
+const partyActivities = {
+    currentPage: 1,
+    
+    init: function() {
+        this.loadActivitiesList();
+        
+        // 新建按钮事件
+        document.getElementById('createActivityBtn').addEventListener('click', () => {
+            this.openCreateModal();
+        });
+        
+        // 检查用户权限，显示或隐藏新建按钮
+        this.checkPermissions();
+    },
+    
+    checkPermissions: function() {
+        if (!currentUser) {
+            document.getElementById('createActivityBtn').style.display = 'none';
+        } else {
+            document.getElementById('createActivityBtn').style.display = 'inline-block';
+            
+            // 对于非管理员用户，显示审核提示
+            if (currentUser.role !== 'admin') {
+                document.getElementById('reviewNotice').style.display = 'block';
+            }
+        }
+    },
+    
+    openCreateModal: function() {
+        document.getElementById('createActivityModal').style.display = 'flex';
+    },
+    
+    closeCreateModal: function() {
+        document.getElementById('createActivityModal').style.display = 'none';
+        document.getElementById('createActivityForm').reset();
+    },
+    
+    createActivity: async function() {
+        const title = document.getElementById('activityTitle').value.trim();
+        const content = document.getElementById('activityContent').value.trim();
+        const startTime = document.getElementById('activityStartTime').value;
+        const endTime = document.getElementById('activityEndTime').value;
+        const location = document.getElementById('activityLocation').value.trim();
+        const organizer = document.getElementById('activityOrganizer').value.trim();
+        const maxParticipants = document.getElementById('activityMaxParticipants').value;
+        
+        if (!title || !content || !startTime || !endTime || !location || !organizer) {
+            utils.showToast('请填写完整信息', 'error');
+            return;
+        }
+        
+        const result = await utils.api('/api/party/activities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title,
+                content: content,
+                start_time: startTime,
+                end_time: endTime,
+                location: location,
+                organizer: organizer,
+                max_participants: maxParticipants ? parseInt(maxParticipants) : null
+            })
+        });
+        
+        if (result.code === 200) {
+            utils.showToast('创建成功', 'success');
+            this.closeCreateModal();
+            this.loadActivitiesList();
+        } else {
+            utils.showToast(result.message || '创建失败', 'error');
+        }
+    },
+    
+    loadActivitiesList: async function() {
+        const listContainer = document.getElementById('activitiesList');
+        listContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        const result = await utils.api(`/api/party/activities?page=${this.currentPage}&per_page=10`);
+        if (result.code === 200) {
+            this.renderActivitiesList(result.data.list, result.data.pagination);
+        } else {
+            utils.showToast('获取组织活动列表失败', 'error');
+            listContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    renderActivitiesList: function(activitiesList, pagination) {
+        const listContainer = document.getElementById('activitiesList');
+        const paginationContainer = document.getElementById('pagination');
+        
+        if (!activitiesList || activitiesList.length === 0) {
+            listContainer.innerHTML = '<div class="empty">暂无组织活动</div>';
+            paginationContainer.innerHTML = '';
+            return;
+        }
+        
+        listContainer.innerHTML = activitiesList.map(activity => `
+            <div class="content-item">
+                <div class="content-header">
+                    <h2 onclick="partyActivities.viewActivityDetail(${activity.id})"><a href="javascript:void(0)">${activity.title}</a></h2>
+                    ${currentUser && currentUser.role === 'admin' ? `
+                        <button class="btn btn-danger btn-sm delete-btn" onclick="partyActivities.deleteActivity(${activity.id})">删除</button>
+                    ` : ''}
+                </div>
+                <div class="meta">
+                    <span>时间: ${utils.formatDate(activity.activity_time)}</span>
+                    <span>地点: ${activity.location}</span>
+                    <span>参与人数: ${activity.participant_count}</span>
+                    <span>发布时间: ${utils.formatDate(activity.created_at)}</span>
+                    ${activity.review_status === 'pending' ? '<span class="status-badge pending">待审核</span>' : ''}
+                    ${activity.review_status === 'rejected' ? '<span class="status-badge rejected">已拒绝</span>' : ''}
+                </div>
+                <p class="summary">${activity.description}</p>
+                ${activity.status === 'upcoming' ? 
+                    '<button onclick="partyActivities.joinActivity(' + activity.id + ')" class="btn btn-primary btn-sm">报名参加</button>' : 
+                    '<span class="status-badge ' + activity.status + '">' + 
+                        (activity.status === 'completed' ? '已完成' : '进行中') + 
+                    '</span>'
+                }
+            </div>
+        `).join('');
+        
+        // 渲染分页
+        this.renderPagination(pagination);
+    },
+    
+    renderPagination: function(pagination) {
+        const paginationContainer = document.getElementById('pagination');
+        let html = '';
+        
+        if (pagination.pages > 1) {
+            html = `
+                <div class="pagination-controls">
+                    <button ${this.currentPage === 1 ? 'disabled' : ''} onclick="partyActivities.goToPage(${this.currentPage - 1})" class="btn btn-sm">上一页</button>
+                    <span>第 ${this.currentPage} 页，共 ${pagination.pages} 页</span>
+                    <button ${this.currentPage === pagination.pages ? 'disabled' : ''} onclick="partyActivities.goToPage(${this.currentPage + 1})" class="btn btn-sm">下一页</button>
+                </div>
+            `;
+        }
+        
+        paginationContainer.innerHTML = html;
+    },
+    
+    goToPage: function(page) {
+        this.currentPage = page;
+        this.loadActivitiesList();
+    },
+    
+    joinActivity: async function(activityId) {
+        if (!currentUser) {
+            utils.showToast('请先登录后再报名参加活动', 'error');
+            return;
+        }
+        
+        // 显示CSRF令牌信息
+        const csrfToken = document.getElementById('globalCsrfToken')?.value || '';
+        console.log('CSRF Token:', csrfToken);
+        console.log('Activity ID:', activityId);
+        
+        const result = await utils.api(`/api/party/activities/${activityId}/register`, {
+            method: 'POST'
+        });
+        console.log('Register Result:', result);
+        if (result.code === 200) {
+            utils.showToast('报名成功', 'success');
+            this.loadActivitiesList();
+        } else {
+            utils.showToast(result.message || '报名失败', 'error');
+        }
+    },
+    
+    deleteActivity: async function(activityId) {
+        if (!confirm('确定要删除这个组织活动吗？')) {
+            return;
+        }
+        
+        const result = await utils.api(`/api/party/activities/${activityId}`, {
+            method: 'DELETE'
+        });
+        
+        if (result.code === 200) {
+            utils.showToast('删除成功', 'success');
+            this.loadActivitiesList();
+        } else {
+            utils.showToast(result.message || '删除失败', 'error');
+        }
+    },
+    
+    viewActivityDetail: async function(activityId) {
+        const modal = document.getElementById('activityDetailModal');
+        const content = document.getElementById('detailContent');
+        const title = document.getElementById('detailTitle');
+        
+        content.innerHTML = '<div class="loading">加载中...</div>';
+        modal.style.display = 'flex';
+        
+        const result = await utils.api(`/api/party/activities/${activityId}`);
+        if (result.code === 200) {
+            this.renderActivityDetail(result.data);
+        } else {
+            utils.showToast(result.message || '获取活动详情失败', 'error');
+            content.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    closeDetailModal: function() {
+        const modal = document.getElementById('activityDetailModal');
+        modal.style.display = 'none';
+    },
+    
+    renderActivityDetail: function(data) {
+        const content = document.getElementById('detailContent');
+        const title = document.getElementById('detailTitle');
+        
+        const { activity, participants } = data;
+        title.textContent = activity.title;
+        
+        content.innerHTML = `
+            <div class="activity-detail">
+                <div class="detail-section">
+                    <h4>活动信息</h4>
+                    <p><strong>内容:</strong> ${activity.content}</p>
+                    <p><strong>开始时间:</strong> ${utils.formatDate(activity.start_time)}</p>
+                    <p><strong>结束时间:</strong> ${utils.formatDate(activity.end_time)}</p>
+                    <p><strong>地点:</strong> ${activity.location}</p>
+                    <p><strong>组织者:</strong> ${activity.organizer}</p>
+                    <p><strong>最大参与人数:</strong> ${activity.max_participants || '无限制'}</p>
+                    <p><strong>当前参与人数:</strong> ${activity.current_participants}</p>
+                    <p><strong>状态:</strong> ${this.getStatusText(activity.status)}</p>
+                </div>
+                
+                <div class="detail-section">
+                    <h4>参与用户 (${participants.length})</h4>
+                    ${participants.length > 0 ? `
+                        <ul class="participant-list">
+                            ${participants.map(p => `
+                                <li>
+                                    <span>${p.username}</span>
+                                    <span class="status-badge ${p.status}">${this.getParticipantStatusText(p.status)}</span>
+                                    <span>${utils.formatDate(p.created_at)}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    ` : '<div class="empty">暂无参与用户</div>'}
+                </div>
+            </div>
+        `;
+    },
+    
+    getStatusText: function(status) {
+        const statusMap = {
+            'upcoming': '即将开始',
+            'active': '进行中',
+            'completed': '已完成'
+        };
+        return statusMap[status] || status;
+    },
+    
+    getParticipantStatusText: function(status) {
+        const statusMap = {
+            'registered': '已报名',
+            'attended': '已参加',
+            'absent': '未参加'
+        };
+        return statusMap[status] || status;
+    }
+};
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', async function() {
+    await auth.checkAuth();
+    partyActivities.init();
+});
+</script>
+
+<style>
+.party-activities-page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-title {
+    color: var(--primary-red);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.action-bar {
+    margin-bottom: 20px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.pagination {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-badge.upcoming {
+    background: #e6f7ff;
+    color: #1890ff;
+}
+
+.status-badge.active {
+    background: #f6ffed;
+    color: #52c41a;
+}
+
+.status-badge.completed {
+    background: #fff1f0;
+    color: #ff4d4f;
+}
+
+.summary {
+    margin: 10px 0;
+    color: var(--text-dark);
+    line-height: 1.5;
+}
+
+.content-item {
+    position: relative;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.content-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.content-item h2 {
+    color: var(--primary-red);
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.content-item .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+/* 模态框样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--primary-red);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-light);
+}
+
+.close-btn:hover {
+    color: var(--primary-red);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--text-dark);
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    background-color: #f9f9f9;
+    border-radius: 0 0 8px 8px;
+}
+
+.alert {
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.alert-info {
+    background-color: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+}
+
+/* 内容项样式 */
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.content-header h2 {
+    color: var(--primary-red);
+    margin: 0;
+    font-size: 18px;
+    flex: 1;
+}
+
+.delete-btn {
+    margin-left: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-badge.pending {
+    background: #fff7e6;
+    color: #fa8c16;
+}
+
+.status-badge.rejected {
+    background: #fff1f0;
+    color: #ff4d4f;
+}
+
+.status-badge.approved {
+    background: #f6ffed;
+    color: #52c41a;
+}
+
+/* 活动详情样式 */
+.activity-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-section {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.detail-section h4 {
+    color: var(--primary-red);
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.detail-section p {
+    margin: 8px 0;
+    line-height: 1.4;
+}
+
+.participant-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.participant-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #fff;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    border: 1px solid #e8e8e8;
+}
+
+.participant-list li .status-badge {
+    flex: 0 0 80px;
+    text-align: center;
+}
+
+.participant-list li span:first-child {
+    flex: 1;
+    font-weight: bold;
+}
+
+.participant-list li span:last-child {
+    flex: 0 0 150px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.status-badge.registered {
+    background: #e6f7ff;
+    color: #1890ff;
+}
+
+.status-badge.attended {
+    background: #f6ffed;
+    color: #52c41a;
+}
+
+.status-badge.absent {
+    background: #fff1f0;
+    color: #ff4d4f;
+}
+
+.content-header h2 a {
+    color: var(--primary-red);
+    text-decoration: none;
+}
+
+.content-header h2 a:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

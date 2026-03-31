@@ -64,6 +64,10 @@ from webapp.routes.notices import notices_bp
 from webapp.routes.profile import profile_bp
 from webapp.routes.categories import categories_bp
 from webapp.routes.audit import audit_bp
+from webapp.routes.party_knowledge import party_knowledge_bp
+from webapp.routes.party_activities import party_activities_bp
+from webapp.routes.party_fees import party_fees_bp
+from webapp.routes.party_integral import party_integral_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(users_bp)
@@ -73,6 +77,10 @@ app.register_blueprint(notices_bp)
 app.register_blueprint(profile_bp)
 app.register_blueprint(categories_bp)
 app.register_blueprint(audit_bp)
+app.register_blueprint(party_knowledge_bp)
+app.register_blueprint(party_activities_bp)
+app.register_blueprint(party_fees_bp)
+app.register_blueprint(party_integral_bp)
 
 
 # 请求日志记录中间件
@@ -265,6 +273,41 @@ def profile_page():
                 'last_login_at': db_user['last_login_at']
             }
     return render_template('profile.html', current_user=current_user_with_avatar)
+
+
+# 路由：党建知识页面
+@app.route('/party/knowledge')
+def party_knowledge_page():
+    """党建知识页面"""
+    return render_template('party_knowledge.html')
+
+
+# 路由：党建知识详情页面
+@app.route('/party/knowledge/<int:knowledge_id>')
+def party_knowledge_detail_page(knowledge_id):
+    """党建知识详情页面"""
+    return render_template('party_knowledge_detail.html', knowledge_id=knowledge_id)
+
+
+# 路由：组织活动页面
+@app.route('/party/activities')
+def party_activities_page():
+    """组织活动页面"""
+    return render_template('party_activities.html')
+
+
+# 路由：党费缴纳页面
+@app.route('/party/fees')
+def party_fees_page():
+    """党费缴纳页面"""
+    return render_template('party_fees.html')
+
+
+# 路由：党员积分页面
+@app.route('/party/integral')
+def party_integral_page():
+    """党员积分页面"""
+    return render_template('party_integral.html')
 
 
 @app.route('/uploads/<path:filename>')

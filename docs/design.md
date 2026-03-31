@@ -158,6 +158,112 @@ party-building/
 | author_id | INT | 外键->users.id | 发布者ID |
 | created_at | DATETIME | 默认当前时间 | 发布时间 |
 
+#### 2.1.8 party_knowledge 表（党建知识表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | 知识ID |
+| title | VARCHAR(255) | 非空 | 标题 |
+| content | TEXT | 非空 | 内容 |
+| category | VARCHAR(50) | 非空 | 分类 |
+| author_id | INT | 外键->users.id | 作者ID |
+| view_count | INT | 默认0 | 浏览量 |
+| status | ENUM | 默认'approved' | 审核状态：pending-待审核, approved-已通过, rejected-已拒绝 |
+| created_at | DATETIME | 默认当前时间 | 创建时间 |
+| updated_at | DATETIME | 自动更新 | 更新时间 |
+
+#### 2.1.9 party_activities 表（组织活动表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | 活动ID |
+| title | VARCHAR(255) | 非空 | 活动标题 |
+| content | TEXT | 非空 | 活动内容 |
+| start_time | DATETIME | 非空 | 开始时间 |
+| end_time | DATETIME | 非空 | 结束时间 |
+| location | VARCHAR(255) | 非空 | 活动地点 |
+| organizer | VARCHAR(100) | 非空 | 组织者 |
+| max_participants | INT | 可为空 | 最大参与人数 |
+| current_participants | INT | 默认0 | 当前参与人数 |
+| status | ENUM | 默认'upcoming' | 活动状态：upcoming-即将开始, ongoing-进行中, completed-已完成 |
+| review_status | ENUM | 默认'approved' | 审核状态：pending-待审核, approved-已通过, rejected-已拒绝 |
+| author_id | INT | 外键->users.id | 发布者ID |
+| created_at | DATETIME | 默认当前时间 | 创建时间 |
+| updated_at | DATETIME | 自动更新 | 更新时间 |
+
+#### 2.1.10 party_activity_participants 表（活动参与表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | 参与ID |
+| activity_id | INT | 外键->party_activities.id | 活动ID |
+| user_id | INT | 外键->users.id | 用户ID |
+| created_at | DATETIME | 默认当前时间 | 报名时间 |
+
+#### 2.1.11 party_fees 表（党费缴纳表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | 缴费记录ID |
+| user_id | INT | 外键->users.id | 用户ID |
+| amount | DECIMAL(10,2) | 非空 | 缴纳金额 |
+| payment_date | DATE | 非空 | 缴纳日期 |
+| payment_period | VARCHAR(20) | 非空 | 缴纳周期 |
+| status | ENUM | 默认'pending' | 缴费状态：pending-待处理, paid-已缴费/处理中, overdue-逾期, completed-处理完毕 |
+| payment_method | VARCHAR(50) | 可为空 | 缴费方式 |
+| remark | VARCHAR(255) | 可为空 | 备注 |
+| created_at | DATETIME | 默认当前时间 | 创建时间 |
+
+#### 2.1.12 party_integral 表（党员积分表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | 积分记录ID |
+| user_id | INT | 外键->users.id | 用户ID |
+| integral | INT | 非空 | 积分数量 |
+| reason | VARCHAR(255) | 非空 | 积分原因 |
+| category | VARCHAR(50) | 非空 | 积分分类 |
+| description | TEXT | 可为空 | 详细说明 |
+| created_at | DATETIME | 默认当前时间 | 记录时间 |
+
+#### 2.1.13 party_member_profiles 表（党员档案表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | ID |
+| user_id | INT | 外键->users.id、唯一 | 用户ID |
+| party_join_date | DATE | 可为空 | 入党日期 |
+| party_branch | VARCHAR(100) | 可为空 | 所属党支部 |
+| position | VARCHAR(100) | 可为空 | 党内职务 |
+| education | VARCHAR(50) | 可为空 | 学历 |
+| work_unit | VARCHAR(255) | 可为空 | 工作单位 |
+| address | VARCHAR(255) | 可为空 | 联系地址 |
+| emergency_contact | VARCHAR(100) | 可为空 | 紧急联系人 |
+| emergency_phone | VARCHAR(20) | 可为空 | 紧急联系电话 |
+| updated_at | DATETIME | 自动更新 | 更新时间 |
+
+#### 2.1.14 party_study_records 表（学习记录表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | ID |
+| user_id | INT | 外键->users.id | 用户ID |
+| knowledge_id | INT | 外键->party_knowledge.id | 知识ID |
+| study_time | INT | 默认0 | 学习时长（分钟） |
+| completed | BOOLEAN | 默认FALSE | 是否完成学习 |
+| created_at | DATETIME | 默认当前时间 | 创建时间 |
+| updated_at | DATETIME | 自动更新 | 更新时间 |
+
+#### 2.1.15 activity_participants 表（活动参与表）
+
+| 字段 | 类型 | 约束 | 说明 |
+|------|------|------|------|
+| id | INT | 主键、自增 | ID |
+| activity_id | INT | 外键->party_activities.id | 活动ID |
+| user_id | INT | 外键->users.id | 用户ID |
+| status | ENUM | 默认'registered' | 参与状态：registered-已报名, attended-已参加, absent-未参加 |
+| created_at | DATETIME | 默认当前时间 | 报名时间 |
+
 ---
 
 ## 3. 模块设计
@@ -221,6 +327,56 @@ party-building/
 | /api/audit/logs | GET | 获取审计日志列表（管理员） |
 | /api/audit/operations | GET | 获取操作类型列表（管理员） |
 | /api/audit/export | GET | 导出审计日志为CSV（管理员） |
+
+#### 3.1.7 党建知识模块 (party_knowledge.py)
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| /api/party/knowledge | GET | 获取党建知识列表 |
+| /api/party/knowledge | POST | 创建党建知识 |
+| /api/party/knowledge/<id> | GET | 获取知识详情 |
+| /api/party/knowledge/<id> | PUT | 更新知识（管理员） |
+| /api/party/knowledge/<id> | DELETE | 删除知识（管理员） |
+| /api/party/knowledge/<id>/review | PUT | 审核知识（管理员） |
+| /api/party/knowledge/<id>/study | POST | 记录学习进度 |
+| /api/party/knowledge/categories | GET | 获取分类列表 |
+
+#### 3.1.8 组织活动模块 (party_activities.py)
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| /api/party/activities | GET | 获取活动列表 |
+| /api/party/activities | POST | 创建活动 |
+| /api/party/activities/<id> | GET | 获取活动详情（含参与用户列表） |
+| /api/party/activities/<id> | PUT | 更新活动（管理员） |
+| /api/party/activities/<id> | DELETE | 删除活动（管理员） |
+| /api/party/activities/<id>/register | POST | 报名参加活动 |
+| /api/party/activities/<id>/unregister | POST | 取消报名 |
+| /api/party/activities/<id>/participants/<user_id>/status | PUT | 更新参与状态（管理员） |
+| /api/party/activities/<id>/review | PUT | 审核活动（管理员） |
+
+#### 3.1.9 党费缴纳模块 (party_fees.py)
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| /api/party/fees | GET | 获取缴费记录列表 |
+| /api/party/fees | POST | 创建缴费记录（管理员） |
+| /api/party/fees/<id> | GET | 获取缴费详情 |
+| /api/party/fees/<id> | PUT | 更新缴费状态 |
+| /api/party/fees/<id> | DELETE | 删除缴费记录（管理员） |
+| /api/party/fees/batch | POST | 批量导入缴费记录（管理员） |
+| /api/party/fees/stats | GET | 获取缴费统计 |
+| /api/party/fees/user-info | GET | 获取用户缴费信息 |
+| /api/party/fees/pay | POST | 在线缴费 |
+
+#### 3.1.10 党员积分模块 (party_integral.py)
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| /api/party/integral | GET | 获取积分记录 |
+| /api/party/integral/stats | GET | 获取积分统计 |
+| /api/party/integral/rank | GET | 获取积分排名 |
+| /api/party/integral/rules | GET | 获取积分规则 |
 
 **GET /api/audit/logs 查询参数：**
 

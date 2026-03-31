@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}党建知识学习 - 智慧党建系统{% endblock %}
+
+{% block content %}
+    <div class="party-knowledge-detail">
+        <div class="content-detail" id="knowledgeDetail">
+            <!-- 知识详情将通过JavaScript动态添加 -->
+            <div class="loading">加载中...</div>
+        </div>
+        
+        <!-- 学习记录 -->
+        <div class="study-record" id="studyRecord">
+            <!-- 学习记录将通过JavaScript动态添加 -->
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 党建知识详情模块
+const partyKnowledgeDetail = {
+    knowledgeId: {{ knowledge_id }},
+    studyStartTime: null,
+    studyTimer: null,
+    studyTime: 0,
+    
+    init: function() {
+        this.loadKnowledgeDetail();
+        this.startStudyTimer();
+    },
+    
+    loadKnowledgeDetail: async function() {
+        const detailContainer = document.getElementById('knowledgeDetail');
+        detailContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        const result = await utils.api(`/api/party/knowledge/${this.knowledgeId}`);
+        if (result.code === 200) {
+            this.renderKnowledgeDetail(result.data.knowledge, result.data.study_record);
+        } else {
+            utils.showToast('获取党建知识详情失败', 'error');
+            detailContainer.innerHTML = '<div class="error">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    renderKnowledgeDetail: function(knowledge, studyRecord) {
+        const detailContainer = document.getElementById('knowledgeDetail');
+        const studyRecordContainer = document.getElementById('studyRecord');
+        
+        detailContainer.innerHTML = `
+            <h1>${knowledge.title}</h1>
+            <div class="meta">
+                <span>分类: ${knowledge.category}</span>
+                <span>作者: ${knowledge.author_name}</span>
+                <span>浏览量: ${knowledge.view_count}</span>
+                <span>发布时间: ${utils.formatDate(knowledge.created_at)}</span>
+            </div>
+            <div class="body">${knowledge.content.replace(/\n/g, '<br>')}</div>
+        `;
+        
+        // 显示学习记录
+        if (currentUser) {
+            studyRecordContainer.innerHTML = `
+                <div class="study-info">
+                    <h3>学习记录</h3>
+                    <div class="study-stats">
+                        <span>已学习时长: ${studyRecord ? studyRecord.study_time : 0} 分钟</span>
+                        <span>学习状态: ${studyRecord && studyRecord.completed ? '已完成' : '学习中'}</span>
+                    </div>
+                    <div class="study-actions">
+                        <button class="btn btn-primary" onclick="partyKnowledgeDetail.completeStudy()">标记为已完成</button>
+                    </div>
+                </div>
+            `;
+        }
+    },
+    
+    startStudyTimer: function() {
+        if (!currentUser) return;
+        
+        this.studyStartTime = Date.now();
+        this.studyTimer = setInterval(() => {
+            this.studyTime = Math.floor((Date.now() - this.studyStartTime) / 60000); // 转换为分钟
+        }, 60000); // 每分钟更新一次
+        
+        // 页面关闭时保存学习记录
+        window.addEventListener('beforeunload', () => {
+            this.saveStudyRecord(false);
+        });
+    },
+    
+    saveStudyRecord: async function(completed) {
+        if (!currentUser) return;
+        
+        clearInterval(this.studyTimer);
+        
+        if (this.studyTime > 0 || completed) {
+            const result = await utils.api(`/api/party/knowledge/${this.knowledgeId}/study`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    study_time: this.studyTime,
+                    completed: completed
+                })
+            });
+            
+            if (result.code === 200 && completed) {
+                utils.showToast('学习完成，已获得积分奖励', 'success');
+                this.loadKnowledgeDetail();
+            }
+        }
+    },
+    
+    completeStudy: function() {
+        if (!currentUser) {
+            window.location.href = '/login';
+            return;
+        }
+        
+        if (confirm('确定要标记为已完成吗？完成后将获得积分奖励')) {
+            this.saveStudyRecord(true);
+        }
+    }
+};
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    partyKnowledgeDetail.init();
+});
+</script>
+
+<style>
+.party-knowledge-detail {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.error {
+    color: #dc3545;
+}
+
+.study-record {
+    margin-top: 40px;
+}
+
+.study-info {
+    background: var(--light-red);
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-red);
+}
+
+.study-info h3 {
+    color: var(--primary-red);
+    margin-bottom: 15px;
+}
+
+.study-stats {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 20px;
+}
+
+.study-actions {
+    margin-top: 20px;
+}
+</style>
+{% endblock %}

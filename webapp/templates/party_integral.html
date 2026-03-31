@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+
+{% block title %}党员积分 - 智慧党建系统{% endblock %}
+
+{% block content %}
+    <div class="party-integral-page">
+        <h1 class="page-title">党员积分</h1>
+        
+        <!-- 积分概览 -->
+        <div class="integral-overview-card">
+            <h2>积分概览</h2>
+            <div class="overview-grid" id="integralOverview">
+                <!-- 积分概览信息将通过JavaScript动态添加 -->
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <!-- 积分排行榜 -->
+        <div class="integral-ranking-section">
+            <h2>积分排行榜</h2>
+            <div class="ranking-list" id="integralRanking">
+                <!-- 排行榜信息将通过JavaScript动态添加 -->
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <!-- 积分明细 -->
+        <div class="integral-details-section">
+            <h2>积分明细</h2>
+            <div class="content-list" id="integralDetailsList">
+                <!-- 积分明细将通过JavaScript动态添加 -->
+                <div class="loading">加载中...</div>
+            </div>
+            
+            <!-- 分页 -->
+            <div class="pagination" id="pagination">
+                <!-- 分页控件将通过JavaScript动态添加 -->
+            </div>
+        </div>
+        
+        <!-- 积分规则 -->
+        <div class="integral-rules-section">
+            <h2>积分规则</h2>
+            <div class="rules-content" id="integralRules">
+                <!-- 积分规则将通过JavaScript动态添加 -->
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 党员积分模块
+const partyIntegral = {
+    currentPage: 1,
+    
+    init: function() {
+        this.loadIntegralOverview();
+        this.loadIntegralRanking();
+        this.loadIntegralDetails();
+        this.loadIntegralRules();
+    },
+    
+    loadIntegralOverview: async function() {
+        const overviewContainer = document.getElementById('integralOverview');
+        overviewContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        if (!currentUser) {
+            overviewContainer.innerHTML = '<div class="empty">请先登录后查看积分信息</div>';
+            return;
+        }
+        
+        const result = await utils.api('/api/party/integral/overview');
+        if (result.code === 200) {
+            this.renderIntegralOverview(result.data);
+        } else {
+            utils.showToast('获取积分概览失败', 'error');
+            overviewContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    loadIntegralRanking: async function() {
+        const rankingContainer = document.getElementById('integralRanking');
+        rankingContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        const result = await utils.api('/api/party/integral/ranking?limit=10');
+        if (result.code === 200) {
+            this.renderIntegralRanking(result.data);
+        } else {
+            utils.showToast('获取积分排行榜失败', 'error');
+            rankingContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    loadIntegralDetails: async function() {
+        const listContainer = document.getElementById('integralDetailsList');
+        listContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        if (!currentUser) {
+            listContainer.innerHTML = '<div class="empty">请先登录后查看积分明细</div>';
+            return;
+        }
+        
+        const result = await utils.api(`/api/party/integral/details?page=${this.currentPage}&per_page=10`);
+        if (result.code === 200) {
+            this.renderIntegralDetails(result.data.list, result.data.pagination);
+        } else {
+            utils.showToast('获取积分明细失败', 'error');
+            listContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    loadIntegralRules: async function() {
+        const rulesContainer = document.getElementById('integralRules');
+        rulesContainer.innerHTML = '<div class="loading">加载中...</div>';
+        
+        const result = await utils.api('/api/party/integral/rules');
+        if (result.code === 200) {
+            this.renderIntegralRules(result.data);
+        } else {
+            utils.showToast('获取积分规则失败', 'error');
+            rulesContainer.innerHTML = '<div class="empty">加载失败，请刷新页面重试</div>';
+        }
+    },
+    
+    renderIntegralOverview: function(overview) {
+        const overviewContainer = document.getElementById('integralOverview');
+        
+        overviewContainer.innerHTML = `
+            <div class="overview-item total">
+                <div class="label">总积分</div>
+                <div class="value">${overview.total_integral || 0}</div>
+            </div>
+            <div class="overview-item recent">
+                <div class="label">本月积分</div>
+                <div class="value">${overview.monthly_integral || 0}</div>
+            </div>
+            <div class="overview-item rank">
+                <div class="label">积分排名</div>
+                <div class="value">${overview.rank || '暂无'}</div>
+            </div>
+        `;
+    },
+    
+    renderIntegralRanking: function(ranking) {
+        const rankingContainer = document.getElementById('integralRanking');
+        
+        if (!ranking || ranking.length === 0) {
+            rankingContainer.innerHTML = '<div class="empty">暂无积分排名数据</div>';
+            return;
+        }
+        
+        rankingContainer.innerHTML = `
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>用户名</th>
+                        <th>总积分</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ranking.map((item, index) => `
+                        <tr ${currentUser && currentUser.username === item.username ? 'class="current-user"' : ''}>
+                            <td class="rank-number">${index + 1}</td>
+                            <td class="username">${item.username}</td>
+                            <td class="points">${item.total_points || 0}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+    
+    renderIntegralDetails: function(detailsList, pagination) {
+        const listContainer = document.getElementById('integralDetailsList');
+        const paginationContainer = document.getElementById('pagination');
+        
+        if (!detailsList || detailsList.length === 0) {
+            listContainer.innerHTML = '<div class="empty">暂无积分记录</div>';
+            paginationContainer.innerHTML = '';
+            return;
+        }
+        
+        listContainer.innerHTML = detailsList.map(detail => `
+            <div class="content-item">
+                <div class="detail-header">
+                    <h3>${detail.reason}</h3>
+                    <span class="integral-value ${detail.points > 0 ? 'positive' : 'negative'}">${detail.points > 0 ? '+' : ''}${detail.points}</span>
+                </div>
+                <div class="detail-meta">
+                    <span>类型: ${this.getCategoryText(detail.category)}</span>
+                    <span>时间: ${utils.formatDate(detail.created_at)}</span>
+                </div>
+                ${detail.description ? `<p class="detail-description">${detail.description}</p>` : ''}
+            </div>
+        `).join('');
+        
+        // 渲染分页
+        this.renderPagination(pagination);
+    },
+    
+    renderIntegralRules: function(rules) {
+        const rulesContainer = document.getElementById('integralRules');
+        
+        if (!rules || rules.length === 0) {
+            rulesContainer.innerHTML = '<div class="empty">暂无积分规则</div>';
+            return;
+        }
+        
+        rulesContainer.innerHTML = rules.map(rule => `
+            <div class="rule-item">
+                <h3>${rule.category}</h3>
+                <ul>
+                    ${rule.items.map(item => `
+                        <li>
+                            <span class="rule-action">${item.action}</span>
+                            <span class="rule-points">${item.points} 积分</span>
+                            ${item.limit ? `<span class="rule-limit">${item.limit}</span>` : ''}
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `).join('');
+    },
+    
+    renderPagination: function(pagination) {
+        const paginationContainer = document.getElementById('pagination');
+        let html = '';
+        
+        if (pagination.pages > 1) {
+            html = `
+                <div class="pagination-controls">
+                    <button ${this.currentPage === 1 ? 'disabled' : ''} onclick="partyIntegral.goToPage(${this.currentPage - 1})" class="btn btn-sm">上一页</button>
+                    <span>第 ${this.currentPage} 页，共 ${pagination.pages} 页</span>
+                    <button ${this.currentPage === pagination.pages ? 'disabled' : ''} onclick="partyIntegral.goToPage(${this.currentPage + 1})" class="btn btn-sm">下一页</button>
+                </div>
+            `;
+        }
+        
+        paginationContainer.innerHTML = html;
+    },
+    
+    goToPage: function(page) {
+        this.currentPage = page;
+        this.loadIntegralDetails();
+    },
+    
+
+    
+    getCategoryText: function(category) {
+        // 处理后端返回的add/deduct类型
+        if (category === 'add') {
+            return '积分增加';
+        } else if (category === 'deduct') {
+            return '积分扣除';
+        }
+        
+        const categories = {
+            'study': '学习教育',
+            'activity': '组织活动',
+            'fee': '党费缴纳',
+            'service': '志愿服务',
+            'other': '其他'
+        };
+        return categories[category] || category;
+    }
+};
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', async function() {
+    await auth.checkAuth();
+    partyIntegral.init();
+});
+</script>
+
+<style>
+.party-integral-page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-title {
+    color: var(--primary-red);
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.integral-overview-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.integral-overview-card h2 {
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.overview-item {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.overview-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.overview-item.total {
+    background: linear-gradient(135deg, #ff4d4f, #ff7875);
+    color: #fff;
+}
+
+.overview-item.recent {
+    background: linear-gradient(135deg, #1890ff, #40a9ff);
+    color: #fff;
+}
+
+.overview-item.rank {
+    background: linear-gradient(135deg, #52c41a, #73d13d);
+    color: #fff;
+}
+
+.overview-item.level {
+    background: linear-gradient(135deg, #faad14, #ffc53d);
+    color: #fff;
+}
+
+.overview-item .label {
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.overview-item .value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.integral-ranking-section {
+    margin-bottom: 30px;
+}
+
+.integral-ranking-section h2 {
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.ranking-table th,
+.ranking-table td {
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.ranking-table th {
+    background: var(--primary-red);
+    color: #fff;
+    font-weight: bold;
+}
+
+.ranking-table tr:hover {
+    background: #f9f9f9;
+}
+
+.ranking-table tr.current-user {
+    background: #fff3cd;
+    font-weight: bold;
+}
+
+.rank-number {
+    font-weight: bold;
+}
+
+.rank-number:nth-child(-n+3) {
+    color: var(--primary-red);
+    font-size: 18px;
+}
+
+.points {
+    font-weight: bold;
+    color: #52c41a;
+}
+
+.integral-details-section,
+.integral-rules-section {
+    margin-bottom: 30px;
+}
+
+.integral-details-section h2,
+.integral-rules-section h2 {
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.pagination {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+.pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.detail-header h3 {
+    color: var(--primary-red);
+    font-size: 16px;
+}
+
+.integral-value {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.integral-value.positive {
+    color: #52c41a;
+}
+
+.integral-value.negative {
+    color: #ff4d4f;
+}
+
+.detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.detail-description {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text-dark);
+    line-height: 1.5;
+}
+
+.rule-item {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.rule-item h3 {
+    color: var(--primary-red);
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.rule-item ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.rule-item li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.rule-item li:last-child {
+    border-bottom: none;
+}
+
+.rule-action {
+    flex: 1;
+    color: var(--text-dark);
+}
+
+.rule-points {
+    font-weight: bold;
+    color: var(--primary-red);
+    margin: 0 20px;
+}
+
+.rule-limit {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.content-item {
+    position: relative;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.content-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}
